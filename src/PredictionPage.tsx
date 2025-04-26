@@ -344,9 +344,6 @@ export default function PredictionPage() {
     }
   }
   
-  
-
-
 
   useEffect(() => {
     console.log('Watching for events...')

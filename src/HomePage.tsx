@@ -805,8 +805,8 @@ export default function HomePage() {
     }
   ] as const;
 
-  const TOKEN_SWAP_ADDRESS: Address = '0xb3996774f1f6c05ba5b2e1ed3be9f74b227dbc84'; // Arbitary token address...
-  const TOKEN_SWAP_ABI = [
+  const TOKEN_POOL_ADDRESS: Address = '0xb3996774f1f6c05ba5b2e1ed3be9f74b227dbc84'; // Arbitary token address...
+  const TOKEN_PAIR_ABI = [
     {
       "inputs": [],
       "payable": false,
@@ -1531,6 +1531,7 @@ export default function HomePage() {
   const { writeContractAsync } = useWriteContract();
   const [isCalculating, setIsCalculating] = useState(false);
 
+
   ////////////////Contract Component States///////////////////////
   const [tokenAAmount, setTokenAAmount] = useState('');
   const [tokenBAmount, setTokenBAmount] = useState('');
@@ -1540,10 +1541,715 @@ export default function HomePage() {
   const [swapToAmount, setSwapToAmount] = useState('');
 
 
+  ////////////////New Approach////////////////////////
+
+  const FACTORY_ADDRESS = '0x740a8a4d1c764bc156B951777EDB6337d271949d' as Address;
+  const FACTORY_ABI = [
+    {
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_feeToSetter",
+          "type": "address"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "token0",
+          "type": "address"
+        },
+        {
+          "indexed": true,
+          "internalType": "address",
+          "name": "token1",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "address",
+          "name": "pair",
+          "type": "address"
+        },
+        {
+          "indexed": false,
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "PairCreated",
+      "type": "event"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "name": "allPairs",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "allPairsLength",
+      "outputs": [
+        {
+          "internalType": "uint256",
+          "name": "",
+          "type": "uint256"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "tokenA",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "tokenB",
+          "type": "address"
+        }
+      ],
+      "name": "createPair",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "pair",
+          "type": "address"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "feeTo",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "feeToSetter",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        },
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "name": "getPair",
+      "outputs": [
+        {
+          "internalType": "address",
+          "name": "",
+          "type": "address"
+        }
+      ],
+      "payable": false,
+      "stateMutability": "view",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_feeTo",
+          "type": "address"
+        }
+      ],
+      "name": "setFeeTo",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {
+          "internalType": "address",
+          "name": "_feeToSetter",
+          "type": "address"
+        }
+      ],
+      "name": "setFeeToSetter",
+      "outputs": [],
+      "payable": false,
+      "stateMutability": "nonpayable",
+      "type": "function"
+    }
+  ] as const;
+
+  const ERC20_ABI = [
+    {
+      "constant": true,
+      "inputs": [{"name": "owner", "type": "address"}],
+      "name": "balanceOf",
+      "outputs": [{"name": "", "type": "uint256"}],
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {"name": "spender", "type": "address"},
+        {"name": "amount", "type": "uint256"}
+      ],
+      "name": "approve",
+      "outputs": [{"name": "", "type": "bool"}],
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "decimals",
+      "outputs": [{"name": "", "type": "uint8"}],
+      "type": "function"
+    },
+    {
+      "constant": true,
+      "inputs": [],
+      "name": "symbol",
+      "outputs": [{"name": "", "type": "string"}],
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {"name": "recipient", "type": "address"},
+        {"name": "amount", "type": "uint256"}
+      ],
+      "name": "transfer",
+      "outputs": [{"name": "", "type": "bool"}],
+      "type": "function"
+    },
+    {
+      "constant": false,
+      "inputs": [
+        {"name": "sender", "type": "address"},
+        {"name": "recipient", "type": "address"},
+        {"name": "amount", "type": "uint256"}
+      ],
+      "name": "transferFrom",
+      "outputs": [{"name": "", "type": "bool"}],
+      "type": "function"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {"indexed": true, "name": "owner", "type": "address"},
+        {"indexed": true, "name": "spender", "type": "address"},
+        {"indexed": false, "name": "value", "type": "uint256"}
+      ],
+      "name": "Approval",
+      "type": "event"
+    },
+    {
+      "anonymous": false,
+      "inputs": [
+        {"indexed": true, "name": "from", "type": "address"},
+        {"indexed": true, "name": "to", "type": "address"},
+        {"indexed": false, "name": "value", "type": "uint256"}
+      ],
+      "name": "Transfer",
+      "type": "event"
+    }
+  ] as const; // <-- This 'as const' is crucial for type inference
+
+
+  const TOKEN_LIST = [
+    { symbol: 'ETH', address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE' }, // Representing native ETH
+    { symbol: 'DAI', address: '0x63599aE00A7A43FaDBc2B72E1390ccbCdd0d455B' },
+    { symbol: 'USDC', address: '0x81960374004ca95499a720027f76c04871e0DFC2' },
+    { symbol: 'WBTC', address: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599' },
+  ];
+
+  const WETH_ADDRESS = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE' as Address
+
+
+  const [isAddLiquidity, setIsAddLiquidity] = useState(true);
+  const [selectedTokenA, setSelectedTokenA] = useState(TOKEN_A_ADDRESS);
+  const [selectedTokenB, setSelectedTokenB] = useState(TOKEN_B_ADDRESS);
+  const [lpAmount, setLpAmount] = useState('');
+  const [lpBalance, setLpBalance] = useState<bigint>();
+  const [pairAddress, setPairAddress] = useState<Address | null>();
+const [lpTokenAddress, setLpTokenAddress] = useState<Address | null>(null);
+
+const getTokenSymbol = (address: Address): string => {
+
+  const token = TOKEN_LIST.find(
+    (t) => t.address.toLowerCase() === address.toLowerCase()
+  );
+
+  
+  return token?.symbol || `Token`;
+};
+
+
+
+  const { data: fetchedPairAddress, refetch: refetchFetchedPairAddress } = useReadContract({
+    abi: FACTORY_ABI,
+    address: FACTORY_ADDRESS,
+    functionName: 'getPair',
+    args: [selectedTokenA, selectedTokenB]
+  });
+
+  
+  
+  const { data: fetchedLpBalanceData, refetch: refetchFetchedLpBalanceData} = useReadContract({
+    abi: TOKEN_PAIR_ABI,
+    address: '0xB3996774F1F6C05Ba5b2E1Ed3be9f74b227DbC84' as Address, // Use pairAddress instead of hardcoded address
+    functionName: 'balanceOf',
+    args: [address as Address], // Remove ! operator
+    query: {
+      enabled: !!address && !!pairAddress,
+    },
+  });
+
+
+useEffect(() => {
+
+  refetchFetchedPairAddress();
+  
+  setPairAddress(fetchedPairAddress);
+
+  refetchFetchedLpBalanceData();
+  
+  setLpBalance(fetchedLpBalanceData);
+
+  console.log("account address =",address!);
+  console.log("address and balance",pairAddress, lpBalance);
+
+
+},[selectedTokenA, selectedTokenB, isAddLiquidity]);
+
+const handleLiquidityAction = async () => {
+  const loadingToast = toast.loading(
+    `${isAddLiquidity ? 'Adding' : 'Removing'} liquidity...`
+  );
+  
+  try {
+    if (!isConnected || !address) {
+      toast.error("Please connect your wallet first.");
+      return;
+    }
+
+    const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
+    const isETHInvolved = [selectedTokenA, selectedTokenB].includes(WETH_ADDRESS);
+
+    if (isAddLiquidity) {
+      const loadingToast = toast.loading('Processing liquidity addition...');
+    
+      try {
+        if (!isConnected || !address) {
+          toast.error("Please connect your wallet first.");
+          return;
+        }
+    
+        const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
+        const isETHInvolved = [selectedTokenA, selectedTokenB].includes(WETH_ADDRESS);
+    
+        if (isETHInvolved) {
+          // Handle ETH liquidity addition
+          const [ethToken, erc20Token] = 
+            selectedTokenA === WETH_ADDRESS 
+              ? [selectedTokenA, selectedTokenB] 
+              : [selectedTokenB, selectedTokenA];
+    
+          const [ethAmount, erc20Amount] = 
+            selectedTokenA === WETH_ADDRESS 
+              ? [tokenAAmount, tokenBAmount] 
+              : [tokenBAmount, tokenAAmount];
+    
+          // Approve ERC20 token
+          toast("Approving ERC20 token...", { icon: '🔃' });
+          await writeContractAsync({
+            address: erc20Token,
+            abi: ERC20_ABI,
+            functionName: 'approve',
+            args: [ROUTER_ADDRESS, parseEther(erc20Amount)]
+          });
+    
+          // Add liquidity with ETH
+          toast("Adding liquidity with ETH...", { icon: '🔃' });
+          const tx = await writeContractAsync({
+            abi: ROUTER_ABI,
+            address: ROUTER_ADDRESS,
+            functionName: 'addLiquidityETH',
+            args: [
+              erc20Token,
+              parseEther(erc20Amount),
+              parseEther((Number(erc20Amount) * 0.99).toString()),
+              parseEther((Number(ethAmount) * 0.99).toString()),
+              address,
+              BigInt(deadline)
+            ],
+            value: parseEther(ethAmount)
+          });
+    
+        } else {
+          // Handle ERC20 token pair
+          toast("Approving tokens...", { icon: '🔃' });
+          await Promise.all([
+            writeContractAsync({
+              address: selectedTokenA,
+              abi: ERC20_ABI,
+              functionName: 'approve',
+              args: [ROUTER_ADDRESS, parseEther(tokenAAmount)]
+            }),
+            writeContractAsync({
+              address: selectedTokenB,
+              abi: ERC20_ABI,
+              functionName: 'approve',
+              args: [ROUTER_ADDRESS, parseEther(tokenBAmount)]
+            })
+          ]);
+    
+          // Add liquidity with ERC20 tokens
+          toast("Adding liquidity...", { icon: '🔃' });
+          const tx = await writeContractAsync({
+            abi: ROUTER_ABI,
+            address: ROUTER_ADDRESS,
+            functionName: 'addLiquidity',
+            args: [
+              selectedTokenA,
+              selectedTokenB,
+              parseEther(tokenAAmount),
+              parseEther(tokenBAmount),
+              parseEther((Number(tokenAAmount) * 0.99).toString()),
+              parseEther((Number(tokenBAmount) * 0.99).toString()),
+              address,
+              BigInt(deadline)
+            ]
+          });
+        }
+    
+        toast.success(
+          <div>
+            <p>Liquidity added successfully!</p>
+          </div>,
+          { duration: 8000 }
+        );
+    
+        setTokenAAmount('');
+        setTokenBAmount('');
+        
+      } catch (error) {
+        console.error("Error adding liquidity:", error);
+        toast.error(
+          `Error: ${error instanceof Error ? error.message : 'Transaction failed'}`
+        );
+      } finally {
+        toast.dismiss(loadingToast);
+      }
+    } else {
+      // Remove liquidity logic
+      if (!lpAmount || Number(lpAmount) <= 0) {
+        toast.error("Please enter valid LP amount");
+        return;
+      }
+
+      const liquidity = parseEther(lpAmount);
+
+      // Approve LP tokens
+      toast("Approving LP tokens...", { icon: '🔃' });
+      await writeContractAsync({
+        address: pairAddress!,
+        abi: ERC20_ABI,
+        functionName: 'approve',
+        args: [ROUTER_ADDRESS, liquidity]
+      });
+
+      if (isETHInvolved) {
+        const [token, eth] = selectedTokenA === WETH_ADDRESS
+          ? [selectedTokenB, selectedTokenA]
+          : [selectedTokenA, selectedTokenB];
+
+        const amountTokenMin = parseEther((Number(tokenAAmount) * 0.99).toString());
+        const amountETHMin = parseEther((Number(tokenBAmount) * 0.99).toString());
+
+        await writeContractAsync({
+          abi: ROUTER_ABI,
+          address: ROUTER_ADDRESS,
+          functionName: 'removeLiquidityETH',
+          args: [
+            token,
+            liquidity,
+            amountTokenMin,
+            amountETHMin,
+            address,
+            BigInt(deadline)
+          ]
+        });
+      } else {
+        const amountAMin = parseEther((Number(tokenAAmount) * 0.99).toString());
+        const amountBMin = parseEther((Number(tokenBAmount) * 0.99).toString());
+
+        await writeContractAsync({
+          abi: ROUTER_ABI,
+          address: ROUTER_ADDRESS,
+          functionName: 'removeLiquidity',
+          args: [
+            selectedTokenA,
+            selectedTokenB,
+            liquidity,
+            amountAMin,
+            amountBMin,
+            address,
+            BigInt(deadline)
+          ]
+        });
+      }
+
+      toast.success("Liquidity removed successfully!");
+      setLpAmount('');
+    }
+  } catch (error) {
+    // Error handling
+  } finally {
+    toast.dismiss(loadingToast);
+  }
+};
+
+  // const handleRemoveLiquidity = async () => {
+  //   const loadingToast = toast.loading('Removing liquidity...');
+  //   try {
+  //     if (!isConnected || !address) {
+  //       toast.error("Please connect your wallet first.");
+  //       return;
+  //     }
+  
+  //     const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
+  //     const liquidity = parseEther(lpAmount);
+      
+  //     // Check if ETH is involved in the pair
+  //     const isETHInvolved = [selectedTokenA, selectedTokenB].includes(WETH_ADDRESS);
+  
+  //     if (isETHInvolved) {
+  //       // Determine which token is WETH (ETH)
+  //       const token = selectedTokenA === WETH_ADDRESS ? selectedTokenB : selectedTokenA;
+  //       const amountTokenMin = parseEther((parseFloat(tokenAAmount) * 0.99).toString());
+  //       const amountETHMin = parseEther((parseFloat(tokenBAmount) * 0.99).toString());
+  
+  //       const tx = await writeContractAsync({
+  //         abi: ROUTER_ABI,
+  //         address: ROUTER_ADDRESS,
+  //         functionName: 'removeLiquidityETH',
+  //         args: [
+  //           token,
+  //           liquidity,
+  //           amountTokenMin,
+  //           amountETHMin,
+  //           address,
+  //           BigInt(deadline)
+  //         ],
+  //       });
+  //     } else {
+  //       // Standard token removal
+  //       const amountAMin = parseEther((parseFloat(tokenAAmount) * 0.99).toString());
+  //       const amountBMin = parseEther((parseFloat(tokenBAmount) * 0.99).toString());
+  
+  //       const tx = await writeContractAsync({
+  //         abi: ROUTER_ABI,
+  //         address: ROUTER_ADDRESS,
+  //         functionName: 'removeLiquidity',
+  //         args: [
+  //           selectedTokenA,
+  //           selectedTokenB,
+  //           liquidity,
+  //           amountAMin,
+  //           amountBMin,
+  //           address,
+  //           BigInt(deadline)
+  //         ],
+  //       });
+  //     }
+  
+  //     // Success handling...
+  //   } catch (error) {
+  //     // Error handling...
+  //   } finally {
+  //     toast.dismiss(loadingToast);
+  //   }
+  // };
+
+  // const handleAddLiquidity = async () => {
+  //   const loadingToast = toast.loading('Processing liquidity addition...');
+    
+  //   try {
+  //     if (!isConnected || !address) {
+  //       toast.error("Please connect your wallet first.");
+  //       return;
+  //     }
+  
+  //     const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
+  //     const isETHInvolved = [selectedTokenA, selectedTokenB].includes(WETH_ADDRESS);
+  
+  //     if (isETHInvolved) {
+  //       // Handle ETH liquidity addition
+  //       const [ethToken, erc20Token] = 
+  //         selectedTokenA === WETH_ADDRESS 
+  //           ? [selectedTokenA, selectedTokenB] 
+  //           : [selectedTokenB, selectedTokenA];
+  
+  //       const [ethAmount, erc20Amount] = 
+  //         selectedTokenA === WETH_ADDRESS 
+  //           ? [tokenAAmount, tokenBAmount] 
+  //           : [tokenBAmount, tokenAAmount];
+  
+  //       // Approve ERC20 token
+  //       toast("Approving ERC20 token...", { icon: '🔃' });
+  //       await writeContractAsync({
+  //         address: erc20Token,
+  //         abi: ERC20_ABI,
+  //         functionName: 'approve',
+  //         args: [ROUTER_ADDRESS, parseEther(erc20Amount)]
+  //       });
+  
+  //       // Add liquidity with ETH
+  //       toast("Adding liquidity with ETH...", { icon: '🔃' });
+  //       const tx = await writeContractAsync({
+  //         abi: ROUTER_ABI,
+  //         address: ROUTER_ADDRESS,
+  //         functionName: 'addLiquidityETH',
+  //         args: [
+  //           erc20Token,
+  //           parseEther(erc20Amount),
+  //           parseEther((Number(erc20Amount) * 0.99).toString()),
+  //           parseEther((Number(ethAmount) * 0.99).toString()),
+  //           address,
+  //           BigInt(deadline)
+  //         ],
+  //         value: parseEther(ethAmount)
+  //       });
+  
+  //     } else {
+  //       // Handle ERC20 token pair
+  //       toast("Approving tokens...", { icon: '🔃' });
+  //       await Promise.all([
+  //         writeContractAsync({
+  //           address: selectedTokenA,
+  //           abi: ERC20_ABI,
+  //           functionName: 'approve',
+  //           args: [ROUTER_ADDRESS, parseEther(tokenAAmount)]
+  //         }),
+  //         writeContractAsync({
+  //           address: selectedTokenB,
+  //           abi: ERC20_ABI,
+  //           functionName: 'approve',
+  //           args: [ROUTER_ADDRESS, parseEther(tokenBAmount)]
+  //         })
+  //       ]);
+  
+  //       // Add liquidity with ERC20 tokens
+  //       toast("Adding liquidity...", { icon: '🔃' });
+  //       const tx = await writeContractAsync({
+  //         abi: ROUTER_ABI,
+  //         address: ROUTER_ADDRESS,
+  //         functionName: 'addLiquidity',
+  //         args: [
+  //           selectedTokenA,
+  //           selectedTokenB,
+  //           parseEther(tokenAAmount),
+  //           parseEther(tokenBAmount),
+  //           parseEther((Number(tokenAAmount) * 0.99).toString()),
+  //           parseEther((Number(tokenBAmount) * 0.99).toString()),
+  //           address,
+  //           BigInt(deadline)
+  //         ]
+  //       });
+  //     }
+  
+  //     toast.success(
+  //       <div>
+  //         <p>Liquidity added successfully!</p>
+  //         <a 
+  //           href={`https://testnet.flarescan.com/tx/${tx}`} 
+  //           target="_blank" 
+  //           rel="noopener noreferrer"
+  //           style={{ color: '#4caf50', textDecoration: 'underline' }}
+  //         >
+  //           View on FlareTestnetScan
+  //         </a>
+  //       </div>,
+  //       { duration: 8000 }
+  //     );
+  
+  //     setTokenAAmount('');
+  //     setTokenBAmount('');
+      
+  //   } catch (error) {
+  //     console.error("Error adding liquidity:", error);
+  //     toast.error(
+  //       `Error: ${error instanceof Error ? error.message : 'Transaction failed'}`
+  //     );
+  //   } finally {
+  //     toast.dismiss(loadingToast);
+  //   }
+  // };
+
   /////////////////Web3 Functions///////////////////////
+  
   const { data: reserves, refetch: refetchAmountsOut } = useReadContract({
-    abi: TOKEN_SWAP_ABI,
-    address: TOKEN_SWAP_ADDRESS,
+    abi: TOKEN_PAIR_ABI,
+    address: TOKEN_POOL_ADDRESS,
     functionName: 'getReserves',
     query: {
       enabled: false // We'll manually trigger this when needed
@@ -1567,22 +2273,22 @@ export default function HomePage() {
 
   const handleAddLiquidity = async () => {
     const loadingToast = toast.loading('Processing liquidity addition...');
-    
+
     try {
       if (!isConnected || !address) {
         toast.error("Please connect your wallet first.");
         return;
       }
-   
-  
+
+
       toast("Approving tokens... (This may take a moment)", { icon: '🔃' });
-  
+
       const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
       const amountADesired = parseEther(tokenAAmount);
       const amountBDesired = parseEther(tokenBAmount);
       const amountAMin = parseEther((parseFloat(tokenAAmount) * 0.99).toString());
       const amountBMin = parseEther((parseFloat(tokenBAmount) * 0.99).toString());
-  
+
       const tx = await writeContractAsync({
         abi: ROUTER_ABI,
         address: ROUTER_ADDRESS,
@@ -1598,13 +2304,13 @@ export default function HomePage() {
           BigInt(deadline)
         ],
       });
-  
+
       toast.success(
         <div>
           <p>Liquidity added successfully!</p>
-          <a 
-            href={`https://testnet.flarescan.com/tx/${tx}`} 
-            target="_blank" 
+          <a
+            href={`https://testnet.flarescan.com/tx/${tx}`}
+            target="_blank"
             rel="noopener noreferrer"
             style={{ color: '#4caf50', textDecoration: 'underline' }}
           >
@@ -1613,10 +2319,10 @@ export default function HomePage() {
         </div>,
         { duration: 8000 }
       );
-  
+
       setTokenAAmount('');
       setTokenBAmount('');
-      
+
     } catch (error) {
       console.error("Error adding liquidity:", error);
       toast.error(
@@ -1629,29 +2335,29 @@ export default function HomePage() {
 
   const handleSwap = async () => {
     const loadingToast = toast.loading('Processing swap...');
-    
+
     try {
       if (!isConnected || !address) {
         toast.error("Please connect your wallet first.");
         return;
       }
-      
+
       if (!swapFromAmount || isNaN(parseFloat(swapFromAmount))) {
         toast.error("Please enter a valid amount to swap");
         return;
       }
-  
+
       if (swapFromToken === swapToToken) {
         toast.error("Cannot swap the same token");
         return;
       }
-  
+
       toast("Preparing swap...", { icon: '🔃' });
-  
+
       const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
       const amountIn = parseEther(swapFromAmount);
       const amountOutMin = parseEther("0");
-  
+
       const tx = await writeContractAsync({
         abi: ROUTER_ABI,
         address: ROUTER_ADDRESS as `0x${string}`,
@@ -1664,13 +2370,13 @@ export default function HomePage() {
           BigInt(deadline),
         ],
       });
-  
+
       toast.success(
         <div>
           <p>Swap executed successfully!</p>
-          <a 
-            href={`https://testnet.flarescan.com/tx/${tx}`} 
-            target="_blank" 
+          <a
+            href={`https://testnet.flarescan.com/tx/${tx}`}
+            target="_blank"
             rel="noopener noreferrer"
             style={{ color: '#4caf50', textDecoration: 'underline' }}
           >
@@ -1679,10 +2385,10 @@ export default function HomePage() {
         </div>,
         { duration: 8000 }
       );
-  
+
       setSwapFromAmount('');
       setSwapToAmount('');
-      
+
     } catch (error) {
       console.error("Error swapping tokens:", error);
       toast.error(
@@ -1832,26 +2538,26 @@ export default function HomePage() {
   useEffect(() => {
     refetchAmountsOut();
     const [reserveA, reserveB] = reserves || [BigInt(0), BigInt(0)];
-    
+
     // Clear tokenBAmount if tokenAAmount is empty
     if (!tokenAAmount || tokenAAmount === '') {
       setTokenBAmount('');
       return;
     }
-  
+
     const ratio = Number(reserveB) / Number(reserveA);
     console.log("Calculating Token B amount...");
     console.log("Token A Amount:", tokenAAmount);
     console.log("Reserve A:", reserveA);
     console.log("Reserve B:", reserveB);
-    
+
     if (tokenAAmount && reserveA > 0 && reserveB > 0) {
       console.log("Calculating Token B amount with reserves...");
       const calculatedB = (parseFloat(tokenAAmount) * ratio).toFixed(18);
       setTokenBAmount(calculatedB);
     }
   }, [tokenAAmount, reserves, refetchAmountsOut]);
-  
+
 
 
   const scrollToSection = (ref: any) => {
@@ -2337,30 +3043,30 @@ export default function HomePage() {
 
   return (
     <>
-    <Toaster 
-      position="top-right"
-      toastOptions={{
-        style: {
-          background: '#1e1e2d',
-          color: '#fff',
-          border: '1px solid #2d2d3d',
-          borderRadius: '12px',
-          fontSize: '14px'
-        },
-        success: {
-          iconTheme: {
-            primary: '#4caf50',
-            secondary: '#fff',
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: {
+            background: '#1e1e2d',
+            color: '#fff',
+            border: '1px solid #2d2d3d',
+            borderRadius: '12px',
+            fontSize: '14px'
           },
-        },
-        error: {
-          iconTheme: {
-            primary: '#f44336',
-            secondary: '#fff',
+          success: {
+            iconTheme: {
+              primary: '#4caf50',
+              secondary: '#fff',
+            },
           },
-        },
-      }}
-    />
+          error: {
+            iconTheme: {
+              primary: '#f44336',
+              secondary: '#fff',
+            },
+          },
+        }}
+      />
       <div ref={mainRef} className="app-container">
         {/* Navbar */}
         <nav ref={navRef} className="navbar">
@@ -2372,7 +3078,7 @@ export default function HomePage() {
               <button onClick={() => scrollToSection(swapSectionRef)}>Swap Tokens</button>
               <button onClick={() => scrollToSection(predictionSectionRef)}>Prediction</button>
             </div>
-       
+
             <div className="wallet-connect">
               {isConnected ? (
                 <button
@@ -2405,12 +3111,12 @@ export default function HomePage() {
           <div className="content-container">
             <header className="hero">
               <h1 className="hero-text">
-              VortexEconomi 
+                VortexEconomi
               </h1>
               <p className="hero-description">
-              Revolutionizing DeFi with a next-generation DEX, AI-powered prediction markets, 
-              and institutional-grade price feeds - all secured by Flare's decentralized 
-               Time Series Oracle network.
+                Revolutionizing DeFi with a next-generation DEX, AI-powered prediction markets,
+                and institutional-grade price feeds - all secured by Flare's decentralized
+                Time Series Oracle network.
               </p>
               <div className="scroll-indicator">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -2423,56 +3129,147 @@ export default function HomePage() {
 
         {/* Liquidity Section */}
         <div ref={liquiditySectionRef} className="section-container">
-          <div className="content-container">
-            <div className="section-content">
-              <div className="liquidity-description">
-                <h2>Liquidity Pools</h2>
-                <p className="glow-text">
-                    Become a market maker in our Uniswap V2-powered liquidity pools and earn <span></span>
-                  <span className="highlight">0.3% fee on every trade</span> proportional to your stake. <span className="highlight">APYs up to 45%</span> through FLR token rewards, while our optimized pool 
-                  architecture reduces impermanent loss by up to 30% compared to standard AMMs.
-                   <span className='highlight'>All pricing is continuously verified by Flare's decentralized oracle network, </span>
-                  ensuring <span className="highlight">fair asset valuation</span> and protection against manipulation.
-                </p>
-                <div className="stats-grid">
-                  <div className="stat-item">
-                    <div className="stat-value">$42.8B</div>
-                    <div className="stat-label">Total Value Locked</div>
-                  </div>
-                  <div className="stat-item">
-                    <div className="stat-value">1.2M</div>
-                    <div className="stat-label">Active Providers</div>
-                  </div>
-                  <div className="stat-item">
-                    <div className="stat-value">12-48%</div>
-                    <div className="stat-label">Average APY</div>
-                  </div>
-                </div>
+  <div className="content-container">
+    <div className="section-content">
+      <div className="liquidity-description">
+        <h2>Liquidity Pools</h2>
+        <p className="glow-text">
+          Become a market maker in our Uniswap V2-powered liquidity pools and earn {' '}
+          <span className="highlight">0.3% fee on every trade</span> proportional to your stake. {' '}
+          <span className="highlight">APYs up to 45%</span> through FLR token rewards, while our optimized pool
+          architecture reduces impermanent loss by up to 30% compared to standard AMMs.
+          <span className="highlight">All pricing is continuously verified by Flare's decentralized oracle network, </span>
+          ensuring <span className="highlight">fair asset valuation</span> and protection against manipulation.
+        </p>
+        <div className="stats-grid">
+          <div className="stat-item">
+            <div className="stat-value">$42.8B</div>
+            <div className="stat-label">Total Value Locked</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-value">1.2M</div>
+            <div className="stat-label">Active Providers</div>
+          </div>
+          <div className="stat-item">
+            <div className="stat-value">12-48%</div>
+            <div className="stat-label">Average APY</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="liquidity-card section-card">
+        <div className="card-content">
+          <div className="liquidity-toggle">
+            <button 
+              className={`toggle-btn ${isAddLiquidity ? 'active' : ''}`}
+              onClick={() => setIsAddLiquidity(true)}
+            >
+              Add
+            </button>
+            <button 
+              className={`toggle-btn ${!isAddLiquidity ? 'active' : ''}`}
+              onClick={() => setIsAddLiquidity(false)}
+            >
+              Remove
+            </button>
+          </div>
+
+          <h2>{isAddLiquidity ? 'Add' : 'Remove'} Liquidity</h2>
+          
+          <div className="token-selectors">
+            <select 
+              value={selectedTokenA}
+              onChange={(e) => setSelectedTokenA(e.target.value as Address)}
+              disabled={!isAddLiquidity}
+            >
+              {TOKEN_LIST.map(token => (
+                <option key={token.address} value={token.address}>
+                  {token.symbol}
+                </option>
+              ))}
+            </select>
+            <select 
+              value={selectedTokenB}
+              onChange={(e) => setSelectedTokenB(e.target.value as Address)}
+              disabled={!isAddLiquidity}
+            >
+              {TOKEN_LIST.map(token => (
+                <option key={token.address} value={token.address}>
+                  {token.symbol}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {isAddLiquidity ? (
+            <>
+              <div className="card-actions">
+                <input
+                  type="number"
+                  placeholder={`${getTokenSymbol(selectedTokenA)} Amount`}
+                  value={tokenAAmount}
+                  onChange={(e) => setTokenAAmount(e.target.value)}
+                />
+                <input
+                  type="number"
+                  placeholder={`${getTokenSymbol(selectedTokenB)} Amount`}
+                  value={tokenBAmount}
+                  readOnly
+                />
               </div>
-              <div className="liquidity-card section-card">
-                <div className="card-content">
-                  <h2>Add Liquidity</h2>
-                  <p>Provide liquidity to earn passive income through trading fees and rewards</p>
-                  <div className="card-actions">
-                    <input type="number" placeholder="Token Amount" onKeyUp={(e) => { setTokenAAmount(e.target.value) }} />
-                    <input type="number" placeholder="Token Amount" value={tokenBAmount} />
-                    <button className="action-btn pulse" onClick={handleAddLiquidity}>Add Liquidity</button>
-                  </div>
-                  <div className="card-stats">
-                    <div className="stat">
-                      <span className="value">$42.8B</span>
-                      <span className="label">Total Locked</span>
-                    </div>
-                    <div className="stat">
-                      <span className="value">12-48%</span>
-                      <span className="label">APY Range</span>
-                    </div>
-                  </div>
-                </div>
+              <div className="rate-info">
+                <span>Pool Ratio: 1 {getTokenSymbol(selectedTokenA)} = 
+                  {(Number(tokenBAmount)/Number(tokenAAmount)).toFixed(4)} {getTokenSymbol(selectedTokenB)}
+                </span>
               </div>
+            </>
+          ) : (
+            <>
+              <div className="lp-info">
+                <span>  Available LP: {formatEther((lpBalance as bigint) || 0n)}</span>
+                <input
+                  type="number"
+                  placeholder="LP Token Amount"
+                  value={lpAmount}
+                  onChange={(e) => setLpAmount(e.target.value)}
+                  max={Number(formatEther((lpBalance as bigint) || 0n))}
+                />
+              </div>
+              <div className="expected-returns">
+                <span>You will receive:</span>
+                <span>{tokenAAmount} {getTokenSymbol(selectedTokenA)}</span>
+                <span>{tokenBAmount} {getTokenSymbol(selectedTokenB)}</span>
+              </div>
+            </>
+          )}
+
+          <button 
+            className="action-btn pulse" 
+            onClick={handleLiquidityAction}
+            disabled={!isAddLiquidity && Number(lpAmount) <= 0}
+          >
+            {isAddLiquidity ? 'Add Liquidity' : 'Remove Liquidity'}
+          </button>
+
+          <div className="card-stats">
+            <div className="stat">
+              <span className="value">
+                {isAddLiquidity ? '$42.8B' : `${formatEther((lpBalance as bigint) || 0n)} LP`}
+              </span>
+              <span className="label">
+                {isAddLiquidity ? 'Total Locked' : 'Your Stake'}
+              </span>
+            </div>
+            <div className="stat">
+              <span className="value">12-48%</span>
+              <span className="label">APY Range</span>
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
 
         {/* Swap Section */}
         <div ref={swapSectionRef} className="section-container">
@@ -2481,14 +3278,14 @@ export default function HomePage() {
               <div className="swap-description">
                 <h2 className="gradient-text">Token Swaps</h2>
                 <p className="glow-text">
-                <span className="flash-icon">⚡</span> Execute zero-gas, cross-chain swaps with <> </>
-                <span >Flare-verified pricing</span> that aggregates liquidity from 
-                15+ DEXs. Our smart order routing dynamically calculates optimal paths 
-                to deliver <span className="highlight">0.1% better rates</span> than leading aggregators, with 
-                <span className="highlight">slippage protection up to $50k volumes</span>. Each trade is 
-                cryptographically verified against Flare's decentralized oracle network 
-                for <span className="highlight">front-running resistance</span> and MEV protection.
-              </p>
+                  <span className="flash-icon">⚡</span> Execute zero-gas, cross-chain swaps with <> </>
+                  <span >Flare-verified pricing</span> that aggregates liquidity from
+                  15+ DEXs. Our smart order routing dynamically calculates optimal paths
+                  to deliver <span className="highlight">0.1% better rates</span> than leading aggregators, with
+                  <span className="highlight">slippage protection up to $50k volumes</span>. Each trade is
+                  cryptographically verified against Flare's decentralized oracle network
+                  for <span className="highlight">front-running resistance</span> and MEV protection.
+                </p>
                 <div className="stats-grid">
                   <div className="stat-item pulse-glow">
                     <div className="stat-value">$1.2B</div>
