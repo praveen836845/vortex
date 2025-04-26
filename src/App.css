@@ -724,6 +724,7 @@ input {
   align-items: center;
   width: 100%;
   max-width: 1200px;
+  padding: 0 2rem;
 }
 
 .nav-logo {
@@ -1096,4 +1097,45 @@ input {
 
 .swap-arrow-circle.pulse {
   animation: pulse 2s infinite;
+}
+
+/* ===== End of Animated Swap Arrow Styles ===== */
+
+.wallet-connect .action-btn {
+  padding: 0.6rem 1.2rem;
+  font-size: 0.9rem;
+  border-radius: 12px;
+  transition: all 0.3s ease;
+}
+
+.wallet-connect .action-btn.connected {
+  background: linear-gradient(45deg, #4a5568, #2d3748);
+}
+
+.wallet-connect .action-btn.connected:hover {
+  background: linear-gradient(45deg, #2d3748, #4a5568);
+}
+
+.truncated-address {
+  margin-right: 0.5rem;
+  font-weight: 500;
+}
+
+.disconnect-label {
+  color: #e2e8f0;
+  opacity: 0.8;
+  font-size: 0.8em;
+}
+
+/* Existing action-btn styles for reference */
+.action-btn.gradient-pulse {
+  background: linear-gradient(45deg, #6b46c1, #553c9a);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.action-btn.gradient-pulse:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(107, 70, 193, 0.4);
 }

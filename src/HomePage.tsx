@@ -15,6 +15,7 @@ import { formatEther, parseEther } from 'viem';
 import type { Address, Abi } from 'viem';
 import { form } from 'wagmi/chains';
 
+
 gsap.registerPlugin(ScrollTrigger);
 
 export default function HomePage() {
@@ -2307,229 +2308,250 @@ export default function HomePage() {
     }
   }
 
-   
 
-    return (
-      <>
-        <div ref={mainRef} className="app-container">
-          {/* Navbar */}
-          <nav ref={navRef} className="navbar">
-            <div className="nav-content">
-              <div className="nav-logo">WEB3</div>
-              <div className="nav-links">
-                <button onClick={() => scrollToSection(heroRef)}>Home</button>
-                <button onClick={() => scrollToSection(liquiditySectionRef)}>Liquidity</button>
-                <button onClick={() => scrollToSection(swapSectionRef)}>Swap Tokens</button>
-                <button onClick={() => scrollToSection(predictionSectionRef)}>Prediction</button>
-              </div>
+
+  return (
+    <>
+      <div ref={mainRef} className="app-container">
+        {/* Navbar */}
+        <nav ref={navRef} className="navbar">
+          <div className="nav-content">
+            <div className="nav-logo">WEB3</div>
+            <div className="nav-links">
+              <button onClick={() => scrollToSection(heroRef)}>Home</button>
+              <button onClick={() => scrollToSection(liquiditySectionRef)}>Liquidity</button>
+              <button onClick={() => scrollToSection(swapSectionRef)}>Swap Tokens</button>
+              <button onClick={() => scrollToSection(predictionSectionRef)}>Prediction</button>
             </div>
-          </nav>
+       
+            <div className="wallet-connect">
+              {isConnected ? (
+                <button
+                  className="action-btn gradient-pulse connected"
+                  onClick={() => disconnect()}
+                >
+                  <span className="truncated-address">
+                    {address?.slice(0, 6)}...{address?.slice(-4)}
+                  </span>
+                  <span className="disconnect-label">Disconnect</span>
+                </button>
+              ) : (
+                <button
+                  className="action-btn gradient-pulse"
+                  onClick={() => connect({ connector: injected() })}
+                >
+                  Connect Wallet
+                </button>
+              )}
+            </div>
+          </div>
+        </nav>
 
-          <video autoPlay muted loop className="background-video">
-            <source src="https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-a-woman-using-her-credit-card-41596-large.mp4" type="video/mp4" />
-          </video>
+        <video autoPlay muted loop className="background-video">
+          <source src="https://assets.mixkit.co/videos/preview/mixkit-digital-animation-of-a-woman-using-her-credit-card-41596-large.mp4" type="video/mp4" />
+        </video>
 
-          {/* Hero Section */}
-          <div ref={heroRef} className="hero-section">
-            <div className="content-container">
-              <header className="hero">
-                <h1 className="hero-text">
-                  WEB3 REVOLUTION
-                </h1>
-                <p className="hero-description">
-                  The next evolution of the internet is here. Experience decentralized finance with our cutting-edge platform.
+        {/* Hero Section */}
+        <div ref={heroRef} className="hero-section">
+          <div className="content-container">
+            <header className="hero">
+              <h1 className="hero-text">
+                WEB3 REVOLUTION
+              </h1>
+              <p className="hero-description">
+                The next evolution of the internet is here. Experience decentralized finance with our cutting-edge platform.
+              </p>
+              <div className="scroll-indicator">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M12 5v14M19 12l-7 7-7-7" />
+                </svg>
+              </div>
+            </header>
+          </div>
+        </div>
+
+        {/* Liquidity Section */}
+        <div ref={liquiditySectionRef} className="section-container">
+          <div className="content-container">
+            <div className="section-content">
+              <div className="liquidity-description">
+                <h2>Liquidity Pools</h2>
+                <p>
+                  Provide liquidity to decentralized exchanges and earn passive income through trading fees and yield farming rewards.
+                  Our platform offers competitive APYs and minimal impermanent loss protection.
                 </p>
-                <div className="scroll-indicator">
-                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M12 5v14M19 12l-7 7-7-7" />
-                  </svg>
-                </div>
-              </header>
-            </div>
-          </div>
-
-          {/* Liquidity Section */}
-          <div ref={liquiditySectionRef} className="section-container">
-            <div className="content-container">
-              <div className="section-content">
-                <div className="liquidity-description">
-                  <h2>Liquidity Pools</h2>
-                  <p>
-                    Provide liquidity to decentralized exchanges and earn passive income through trading fees and yield farming rewards.
-                    Our platform offers competitive APYs and minimal impermanent loss protection.
-                  </p>
-                  <div className="stats-grid">
-                    <div className="stat-item">
-                      <div className="stat-value">$42.8B</div>
-                      <div className="stat-label">Total Value Locked</div>
-                    </div>
-                    <div className="stat-item">
-                      <div className="stat-value">1.2M</div>
-                      <div className="stat-label">Active Providers</div>
-                    </div>
-                    <div className="stat-item">
-                      <div className="stat-value">12-48%</div>
-                      <div className="stat-label">Average APY</div>
-                    </div>
+                <div className="stats-grid">
+                  <div className="stat-item">
+                    <div className="stat-value">$42.8B</div>
+                    <div className="stat-label">Total Value Locked</div>
                   </div>
-                </div>
-                <div className="liquidity-card section-card">
-                  <div className="card-content">
-                    <h2>Add Liquidity</h2>
-                    <p>Provide liquidity to earn passive income through trading fees and rewards</p>
-                    <div className="card-actions">
-                      <input type="number" placeholder="Token Amount" onKeyUp={(e) => { setTokenAAmount(e.target.value) }} />
-                      <input type="number" placeholder="Token Amount" value={tokenBAmount} />
-                      <button className="action-btn pulse" onClick={handleAddLiquidity}>Add Liquidity</button>
-                    </div>
-                    <div className="card-stats">
-                      <div className="stat">
-                        <span className="value">$42.8B</span>
-                        <span className="label">Total Locked</span>
-                      </div>
-                      <div className="stat">
-                        <span className="value">12-48%</span>
-                        <span className="label">APY Range</span>
-                      </div>
-                    </div>
+                  <div className="stat-item">
+                    <div className="stat-value">1.2M</div>
+                    <div className="stat-label">Active Providers</div>
+                  </div>
+                  <div className="stat-item">
+                    <div className="stat-value">12-48%</div>
+                    <div className="stat-label">Average APY</div>
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-
-          {/* Swap Section */}
-          <div ref={swapSectionRef} className="section-container">
-            <div className="content-container">
-              <div className="section-content reverse">
-                <div className="swap-description">
-                  <h2 className="gradient-text">Token Swaps</h2>
-                  <p className="glow-text">
-                    Trade tokens instantly with optimal pricing and minimal slippage.
-                    Our advanced routing algorithm scans multiple DEXs to find you the best rates.
-                  </p>
-                  <div className="stats-grid">
-                    <div className="stat-item pulse-glow">
-                      <div className="stat-value">$1.2B</div>
-                      <div className="stat-label">24h Volume</div>
+              <div className="liquidity-card section-card">
+                <div className="card-content">
+                  <h2>Add Liquidity</h2>
+                  <p>Provide liquidity to earn passive income through trading fees and rewards</p>
+                  <div className="card-actions">
+                    <input type="number" placeholder="Token Amount" onKeyUp={(e) => { setTokenAAmount(e.target.value) }} />
+                    <input type="number" placeholder="Token Amount" value={tokenBAmount} />
+                    <button className="action-btn pulse" onClick={handleAddLiquidity}>Add Liquidity</button>
+                  </div>
+                  <div className="card-stats">
+                    <div className="stat">
+                      <span className="value">$42.8B</span>
+                      <span className="label">Total Locked</span>
                     </div>
-                    <div className="stat-item pulse-glow">
-                      <div className="stat-value">0.05%</div>
-                      <div className="stat-label">Average Fee</div>
-                    </div>
-                    <div className="stat-item pulse-glow">
-                      <div className="stat-value">12s</div>
-                      <div className="stat-label">Avg. Swap Time</div>
+                    <div className="stat">
+                      <span className="value">12-48%</span>
+                      <span className="label">APY Range</span>
                     </div>
                   </div>
                 </div>
-
-                <div className="swap-card section-card neo-glass">
-                  <div className="card-content">
-                    <h2 className="card-title">Swap Tokens</h2>
-                    <p className="card-subtitle">Get the best rates across DeFi</p>
-
-                    <div className="card-actions">
-                      <div className="swap-input-container neo-inset">
-                        <input type="number" placeholder="0.0" className="swap-amount-input" onKeyUp={(e) => { setSwapFromAmount(e.target.value) }} />
-                        <div className="token-select-wrapper">
-                          <select className="token-select-right">
-                            <option value="ETH">ETH</option>
-                            <option value="BTC">BTC</option>
-                            <option value="USDC">USDC</option>
-                            <option value="DAI">DAI</option>
-                          </select>
-                          <div className="token-icon eth-icon"></div>
-                        </div>
-                      </div>
-
-                      <div className="swap-arrow-container">
-                        <div className="swap-arrow-circle">
-                          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="swap-arrow-icon">
-                            <path d="M12 4V20M12 20L18 14M12 20L6 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                          </svg>
-                        </div>
-                      </div>
-
-                      <div className="swap-input-container neo-inset">
-                        <input type="number" placeholder="0.0" className="swap-amount-input" value={swapToAmount} />
-                        <div className="token-select-wrapper">
-                          <select className="token-select-right">
-                            <option value="USDC">USDC</option>
-                            <option value="ETH">ETH</option>
-                            <option value="BTC">BTC</option>
-                            <option value="DAI">DAI</option>
-                          </select>
-                          <div className="token-icon usdc-icon"></div>
-                        </div>
-                      </div>
-
-                      <button className="action-btn gradient-pulse" onClick={handleSwap}> {isCalculating ? <span>Calculating...</span> : <span>Swap Now</span>}
-
-                      </button>
-                    </div>
-
-                    <div className="rate-info">
-                      <span className="rate-label">Best rate:</span>
-                      <span className="rate-value">1 ETH = 1,850.42 USDC</span>
-                    </div>
-
-                    <div className="card-stats">
-                      <div className="stat">
-                        <span className="value">0.05%</span>
-                        <span className="label">Fee</span>
-                      </div>
-                      <div className="stat">
-                        <span className="value">$1.2B</span>
-                        <span className="label">Volume 24h</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Prediction Section */}
-
-
-          {/* // Inside your component's return statement: */}
-          <div ref={predictionSectionRef} className="section-container full-width">
-            <div className="content-container">
-              <h2 className="section-title">Prediction Markets</h2>
-              <p className="section-subtitle">Trade on future price movements with AI-powered insights</p>
-
-              <div className="prediction-cards-container">
-                <PredictionCard
-                  asset="BTC"
-                  currentPrice={prices.BTC}
-                  priceChange={2.4}
-                  timeRemaining={deadlines.BTC}
-                  progress={30}
-                  volume={volumes.BTC}
-                />
-
-                <PredictionCard
-                  asset="FLR"
-                  currentPrice={prices.FLR}
-                  priceChange={1.8}
-                  timeRemaining={deadlines.FLR}
-                  progress={40}
-                  volume={volumes.FLR}
-                />
-
-                <PredictionCard
-                  asset="DOGE"
-                  currentPrice={prices.DOGE}
-                  priceChange={-3.2}
-                  timeRemaining={deadlines.DOGE}
-                  progress={25}
-                  volume={volumes.DOGE}
-                />
               </div>
             </div>
           </div>
         </div>
-      </>
-    );
-  }
+
+        {/* Swap Section */}
+        <div ref={swapSectionRef} className="section-container">
+          <div className="content-container">
+            <div className="section-content reverse">
+              <div className="swap-description">
+                <h2 className="gradient-text">Token Swaps</h2>
+                <p className="glow-text">
+                  Trade tokens instantly with optimal pricing and minimal slippage.
+                  Our advanced routing algorithm scans multiple DEXs to find you the best rates.
+                </p>
+                <div className="stats-grid">
+                  <div className="stat-item pulse-glow">
+                    <div className="stat-value">$1.2B</div>
+                    <div className="stat-label">24h Volume</div>
+                  </div>
+                  <div className="stat-item pulse-glow">
+                    <div className="stat-value">0.05%</div>
+                    <div className="stat-label">Average Fee</div>
+                  </div>
+                  <div className="stat-item pulse-glow">
+                    <div className="stat-value">12s</div>
+                    <div className="stat-label">Avg. Swap Time</div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="swap-card section-card neo-glass">
+                <div className="card-content">
+                  <h2 className="card-title">Swap Tokens</h2>
+                  <p className="card-subtitle">Get the best rates across DeFi</p>
+
+                  <div className="card-actions">
+                    <div className="swap-input-container neo-inset">
+                      <input type="number" placeholder="0.0" className="swap-amount-input" onKeyUp={(e) => { setSwapFromAmount(e.target.value) }} />
+                      <div className="token-select-wrapper">
+                        <select className="token-select-right">
+                          <option value="ETH">ETH</option>
+                          <option value="BTC">BTC</option>
+                          <option value="USDC">USDC</option>
+                          <option value="DAI">DAI</option>
+                        </select>
+                        <div className="token-icon eth-icon"></div>
+                      </div>
+                    </div>
+
+                    <div className="swap-arrow-container">
+                      <div className="swap-arrow-circle">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="swap-arrow-icon">
+                          <path d="M12 4V20M12 20L18 14M12 20L6 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                        </svg>
+                      </div>
+                    </div>
+
+                    <div className="swap-input-container neo-inset">
+                      <input type="number" placeholder="0.0" className="swap-amount-input" value={swapToAmount} />
+                      <div className="token-select-wrapper">
+                        <select className="token-select-right">
+                          <option value="USDC">USDC</option>
+                          <option value="ETH">ETH</option>
+                          <option value="BTC">BTC</option>
+                          <option value="DAI">DAI</option>
+                        </select>
+                        <div className="token-icon usdc-icon"></div>
+                      </div>
+                    </div>
+
+                    <button className="action-btn gradient-pulse" onClick={handleSwap}> {isCalculating ? <span>Calculating...</span> : <span>Swap Now</span>}
+
+                    </button>
+                  </div>
+
+                  <div className="rate-info">
+                    <span className="rate-label">Best rate:</span>
+                    <span className="rate-value">1 ETH = 1,850.42 USDC</span>
+                  </div>
+
+                  <div className="card-stats">
+                    <div className="stat">
+                      <span className="value">0.05%</span>
+                      <span className="label">Fee</span>
+                    </div>
+                    <div className="stat">
+                      <span className="value">$1.2B</span>
+                      <span className="label">Volume 24h</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Prediction Section */}
+
+
+        {/* // Inside your component's return statement: */}
+        <div ref={predictionSectionRef} className="section-container full-width">
+          <div className="content-container">
+            <h2 className="section-title">Prediction Markets</h2>
+            <p className="section-subtitle">Trade on future price movements with AI-powered insights</p>
+
+            <div className="prediction-cards-container">
+              <PredictionCard
+                asset="BTC"
+                currentPrice={prices.BTC}
+                priceChange={2.4}
+                timeRemaining={deadlines.BTC}
+                progress={30}
+                volume={volumes.BTC}
+              />
+
+              <PredictionCard
+                asset="FLR"
+                currentPrice={prices.FLR}
+                priceChange={1.8}
+                timeRemaining={deadlines.FLR}
+                progress={40}
+                volume={volumes.FLR}
+              />
+
+              <PredictionCard
+                asset="DOGE"
+                currentPrice={prices.DOGE}
+                priceChange={-3.2}
+                timeRemaining={deadlines.DOGE}
+                progress={25}
+                volume={volumes.DOGE}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  );
+}
