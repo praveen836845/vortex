@@ -19,11 +19,20 @@ export default function PredictionCard({
   volume
 }: PredictionCardProps) {
   const navigate = useNavigate();
-
+ console.log("Price>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>", currentPrice);
   const handleCardClick = (e: React.MouseEvent) => {
     // Prevent navigation if clicking on action buttons
     if ((e.target as HTMLElement).closest('button')) return;
-    navigate(`/prediction/${encodeURIComponent(asset)}`);
+    navigate(`/prediction/${encodeURIComponent(asset)}`, {
+      state: { // Pass data via state
+        asset,
+        currentPrice,
+        priceChange,
+        timeRemaining,
+        progress,
+        volume,
+      },
+    });
   };
 
   return (

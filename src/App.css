@@ -451,7 +451,7 @@ input {
   display: flex;
   align-items: center;
   gap: 15px;
-  margin: 20px 0;
+  margin: 20px 20px;
 }
 
 .current-price {

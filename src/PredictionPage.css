@@ -99,6 +99,69 @@
     background: rgba(255, 71, 87, 0.2);
     color: #ff4757;
 }
+.claim-reward-btn {
+    position: absolute;
+    margin-top: 15rem;
+    padding: 15px 30px;
+    background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+    color: white;
+    border: none;
+    border-radius: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+    
+    /* Pulse animation */
+    animation: pulse 2s infinite;
+    
+    /* Glow effect */
+    box-shadow: 0 0 10px rgba(79, 172, 254, 0.7);
+  }
+  
+  .claim-reward-btn:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 15px rgba(0, 242, 254, 0.8);
+    animation: none; /* Stop pulse on hover */
+  }
+  
+  /* Pulse animation */
+  @keyframes pulse {
+    0% {
+      transform: scale(1);
+      box-shadow: 0 0 10px rgba(79, 172, 254, 0.7);
+    }
+    50% {
+      transform: scale(1.05);
+      box-shadow: 0 0 20px rgba(0, 242, 254, 0.9);
+    }
+    100% {
+      transform: scale(1);
+      box-shadow: 0 0 10px rgba(79, 172, 254, 0.7);
+    }
+  }
+  
+  /* Additional attention-grabbing animation */
+  @keyframes highlight {
+    0% {
+      background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+    }
+    50% {
+      background: linear-gradient(90deg, #ff6b6b 0%, #ffa3a3 100%);
+    }
+    100% {
+      background: linear-gradient(90deg, #4facfe 0%, #00f2fe 100%);
+    }
+  }
+  
+  /* Apply highlight animation when first appears */
+  .claim-reward-btn.highlight {
+    animation: highlight 1.5s ease-in-out 3, pulse 2s infinite 1.5s;
+  }
+  
+  .claim-reward-btn:active {
+    transform: translateY(0);
+  }
 
 .market-stats {
     flex: 1;

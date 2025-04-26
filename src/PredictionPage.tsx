@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate , useLocation} from 'react-router-dom';
 import { gsap } from 'gsap';
 import './PredictionPage.css';
 
@@ -10,6 +10,14 @@ import { watchContractEvent } from '@wagmi/core'
 import { config } from './index' 
 import { parseAbiItem } from 'viem';
 
+interface MarketData {
+  currentPrice: number;
+  change: number;
+  volume: string;
+  timeRemaining: string;
+  progress: number;
+  description: string;
+}
 // Mock data for the prediction markets
 const predictionData = {
   'BTC': {
@@ -50,10 +58,12 @@ const votingData = Array(10).fill(0).map((_, i) => ({
 export default function PredictionPage() {
   const { asset } = useParams();
   const navigate = useNavigate();
-  const [marketData, setMarketData] = useState<any>(null);
+  const location = useLocation(); // Get navigation state
+  const [marketData, setMarketData] = useState<MarketData | null>(null);
   const [voteDirection, setVoteDirection] = useState<'up' | 'down' | null>(null);
   const [voteAmount, setVoteAmount] = useState('');
-  const { writeContractAsync } = useWriteContract()
+  const { writeContractAsync } = useWriteContract();
+  const [isClaim, setIsClaim] = useState(true);
   const [logs, setLogs] = useState<LogEntry[]>([]);
 
   const CRYPTO_POOL_ADDRESSES = {
@@ -363,12 +373,35 @@ export default function PredictionPage() {
       setVoteAmount('');
     }).catch(console.error);
   }
+  
 
 
   useEffect(() => {
-    if (asset && predictionData[asset as keyof typeof predictionData]) {
-      setMarketData(predictionData[asset as keyof typeof predictionData]);
+    if (!asset) {
+      navigate('/');
+      return;
+    }
 
+    // Determine the data source
+    let data: MarketData;
+    if (location.state) {
+      // Parse the current price safely (handle both "$1,000" and "1000" formats)
+      const priceString = location.state.currentPrice.replace(/[^0-9.-]/g, '');
+      data = {
+        currentPrice: parseFloat(priceString) || 0,
+        change: location.state.priceChange,
+        timeRemaining: location.state.timeRemaining,
+        progress: location.state.progress,
+        volume: location.state.volume,
+        description: `${asset} price prediction market`,
+      };
+    } else if (predictionData[asset as keyof typeof predictionData]) {
+      data = predictionData[asset as keyof typeof predictionData];
+    } else {
+      navigate('/');
+      return;
+    }
+    setMarketData(data);
       // Animation on load
       gsap.from('.prediction-header', {
         opacity: 0,
@@ -400,10 +433,8 @@ export default function PredictionPage() {
         delay: 0.6,
         ease: 'power3.out'
       });
-    } else {
-      navigate('/');
-    }
-  }, [asset, navigate]);
+    
+  }, [asset, location.state , navigate]);
 
   const handleVote = () => {
     if (voteDirection && voteAmount) {
@@ -416,7 +447,7 @@ export default function PredictionPage() {
   };
 
   if (!marketData) return <div className="loading">Loading...</div>;
-
+   console.log("checked>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ",marketData );
   return (
     <div className="prediction-page">
       <button className="back-button" onClick={() => navigate('/')}>
@@ -438,6 +469,24 @@ export default function PredictionPage() {
             </span>
           </div>
         </div>
+        {isClaim && (
+    <button 
+      className="claim-reward-btn"
+      onClick={() => {
+        writeContractAsync({
+          abi: CRYPTO_POOL_ABI,
+          address: CRYPTO_POOL_ADDRESSES[asset as keyof typeof CRYPTO_POOL_ADDRESSES] as Address,
+          functionName: 'claimRewards',
+        }).then(() => {
+          alert('Rewards claimed successfully!');
+          setIsClaim(false);
+        }).catch(console.error);
+      }}
+    >
+      Claim Reward
+    </button>
+  )}
+
 
         <div className="market-stats">
           <div className="stat-item">
@@ -535,8 +584,7 @@ export default function PredictionPage() {
   </table>
   {logs.length <= 10 && (
     <div className="no-predictions">
-      Fetching predictions...  Please wait a moment.<br />
-    
+      {/* Fetching predictions...  Please wait a moment.<br /> */}
     </div>
   )}
 </div>

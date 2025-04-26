@@ -2133,9 +2133,9 @@ export default function HomePage() {
 
       // Update state with formatted values
       setPrices({
-        BTC: formatPrice(btcResult.data?.[0] || 0n, priceDataBTC?.[1] ?? 8),
-        FLR: formatPrice(flrResult.data?.[0] || 0n, priceDataFLR?.[1] ?? 8),
-        DOGE: formatPrice(dogeResult.data?.[0] || 0n, priceDataDOGE?.[1] ?? 8)
+        BTC: formatPrice(btcResult.data?.[0] || 0n, priceDataBTC?.[1] ?? 10),
+        FLR: formatPrice(flrResult.data?.[0] || 0n, priceDataFLR?.[1] ?? 10),
+        DOGE: formatPrice(dogeResult.data?.[0] || 0n, priceDataDOGE?.[1] ?? 10)
       });
     } catch (err) {
       setError('Failed to fetch prices. Please try again.');
@@ -2147,7 +2147,7 @@ export default function HomePage() {
 
   useEffect(() => {
     handleRefreshPrices();
-  }, []);
+  }, [priceDataBTC, priceDataFLR, priceDataDOGE]);
 
 
   ///////////End-in Fetching///////////////
