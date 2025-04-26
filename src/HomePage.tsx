@@ -1855,7 +1855,7 @@ const getTokenSymbol = (address: Address): string => {
   
   const { data: fetchedLpBalanceData, refetch: refetchFetchedLpBalanceData} = useReadContract({
     abi: TOKEN_PAIR_ABI,
-    address: '0xB3996774F1F6C05Ba5b2E1Ed3be9f74b227DbC84' as Address, // Use pairAddress instead of hardcoded address
+    address: pairAddress as Address, // Use pairAddress instead of hardcoded address
     functionName: 'balanceOf',
     args: [address as Address], // Remove ! operator
     query: {
