@@ -54,7 +54,7 @@ export default function PredictionPage() {
   const [voteDirection, setVoteDirection] = useState<'up' | 'down' | null>(null);
   const [voteAmount, setVoteAmount] = useState('');
   const { writeContractAsync } = useWriteContract()
-  const [logs, setLogs] = useState('');
+  const [logs, setLogs] = useState<LogEntry[]>([]);
 
   const CRYPTO_POOL_ADDRESSES = {
     "BTC": "0x20d39847f01386820e30bc0af5e5733147e363dc",
@@ -245,6 +245,24 @@ export default function PredictionPage() {
 
   const publicClient = usePublicClient();
 
+  interface LogEntry {
+    address: string;
+    args: {
+      user: string;
+      prediction: boolean;
+      amount: bigint;
+    };
+    blockHash: string;
+    blockNumber: bigint;
+    data: string;
+    eventName: string;
+    logIndex: number;
+    removed: boolean;
+    topics: string[];
+    transactionHash: string;
+    transactionIndex: number;
+  }
+
   const unwatch = watchContractEvent(config, {
     address: CRYPTO_POOL_ADDRESSES[asset as keyof typeof CRYPTO_POOL_ADDRESSES] as Address,
     abi: CRYPTO_POOL_ABI,
@@ -258,30 +276,27 @@ export default function PredictionPage() {
   async function fetchHistoricalLogs(contractAddress: `0x${string}`) {
     if (!publicClient) {
       console.error('Public client not available');
-      return [];
+      setLogs([]);
+      return;
     }
   
     try {
       const latestBlock = await publicClient.getBlockNumber();
-      const MAX_BLOCKS_PER_CALL = 30n; // Keep RPC limit of 30 blocks
-      const BLOCKS_TO_FETCH = 10000n; // Hardcoded total blocks to scan
+      const MAX_BLOCKS_PER_CALL = 30n;
+      const BLOCKS_TO_FETCH = 10000n;
       
-      // Calculate initial range
       let toBlock = latestBlock;
       let fromBlock = toBlock - BLOCKS_TO_FETCH;
       fromBlock = fromBlock < 0n ? 0n : fromBlock;
       
-      const allLogs = [];
+      const allLogs: LogEntry[] = [];
   
       while (toBlock > fromBlock) {
         try {
-          // Ensure we don't exceed block range
           const currentFromBlock = toBlock - MAX_BLOCKS_PER_CALL > fromBlock 
             ? toBlock - MAX_BLOCKS_PER_CALL 
             : fromBlock;
   
-          console.log(`Fetching blocks ${currentFromBlock}-${toBlock}`);
-          
           const logs = await publicClient.getLogs({
             address: contractAddress,
             event: parseAbiItem(
@@ -291,23 +306,30 @@ export default function PredictionPage() {
             toBlock
           });
   
-          allLogs.push(...logs);
-          console.log('fetched logs:', logs); 
-          // Move to previous block range
-          toBlock = currentFromBlock - 1n;
+          // Type assertion for the logs
+          const typedLogs = logs as unknown as LogEntry[];
+          allLogs.push(...typedLogs);
           
-          // Add small delay between calls
-          await new Promise(resolve => setTimeout(resolve, 50));
+          // Update state with spread operator for reactivity
+          setLogs([...allLogs]);
+          console.log('Fetched logs:', allLogs);
+          toBlock = currentFromBlock - 1n;
+          await new Promise(resolve => setTimeout(resolve, 100));
         } catch (error) {
           console.error(`Failed blocks ${fromBlock}-${toBlock}:`, error);
+          setLogs([]);
           break;
         }
       }
   
-      console.log("Total logs found:", allLogs.length);
-      return allLogs.reverse();
+      // Final update with reversed logs
+      const reversedLogs = [...allLogs].reverse();
+      setLogs(reversedLogs);
+      console.log('Fetched logs:', logs);
+      return reversedLogs;
     } catch (error) {
       console.error('Critical error:', error);
+      setLogs([]);
       return [];
     }
   }
@@ -488,32 +510,36 @@ export default function PredictionPage() {
       </div>
 
       <div className="votes-table-container">
-        <h2 className='votes-table-label'>Recent Predictions</h2>
-        <table className="votes-table">
-          <thead>
-            <tr>
-              <th>Voter</th>
-              <th>Amount</th>
-              <th>Prediction</th>
-              <th>Time</th>
-            </tr>
-          </thead>
-          <tbody>
-            {votingData.map((vote) => (
-              <tr key={vote.id}>
-                <td>{vote.voter}</td>
-                <td>{vote.amount}</td>
-                <td>
-                  <span className={`prediction-badge ${vote.prediction.toLowerCase()}`}>
-                    {vote.prediction}
-                  </span>
-                </td>
-                <td>{vote.timestamp}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+  <h2 className='votes-table-label'>Recent Predictions</h2>
+  <table className="votes-table">
+    <thead>
+      <tr>
+        <th>Voter</th>
+        <th>Amount</th>
+        <th>Prediction</th>
+      </tr>
+    </thead>
+    <tbody>
+      {logs.map((log) => (
+        <tr key={`${log.transactionHash}-${log.logIndex}`}>
+          <td>{log.args.user.slice(0, 6)}...{log.args.user.slice(-4)}</td>
+          <td>{(Number(log.args.amount) / 1e18).toFixed(2)} ETH</td>
+          <td>
+            <span className={`prediction-badge ${log.args.prediction ? 'up' : 'down'}`}>
+              {log.args.prediction ? 'Up' : 'Down'}
+            </span>
+          </td>
+        </tr>
+      ))}
+    </tbody>
+  </table>
+  {logs.length <= 10 && (
+    <div className="no-predictions">
+      Fetching predictions...  Please wait a moment.<br />
+    
+    </div>
+  )}
+</div>
     </div>
   );
 }
