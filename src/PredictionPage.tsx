@@ -256,34 +256,58 @@ export default function PredictionPage() {
 
   
   async function fetchHistoricalLogs(contractAddress: `0x${string}`) {
-
-    
     if (!publicClient) {
       console.error('Public client not available');
       return [];
     }
   
     try {
-      // 1. Get latest block number
       const latestBlock = await publicClient.getBlockNumber();
+      const MAX_BLOCKS_PER_CALL = 30n; // Keep RPC limit of 30 blocks
+      const BLOCKS_TO_FETCH = 10000n; // Hardcoded total blocks to scan
       
-      // 2. Define batch size (30 blocks or less to comply with RPC limits)
-      const MAX_BLOCKS_PER_REQUEST = 30n;
-      let fromBlock = latestBlock - MAX_BLOCKS_PER_REQUEST;
+      // Calculate initial range
+      let toBlock = latestBlock;
+      let fromBlock = toBlock - BLOCKS_TO_FETCH;
       fromBlock = fromBlock < 0n ? 0n : fromBlock;
+      
+      const allLogs = [];
   
-      // 3. Fetch logs in batches
-      const logs = await publicClient.getLogs({
-        address: contractAddress,
-        event: parseAbiItem('event Predicted(address indexed user, bool prediction, uint256 amount)'),
-        fromBlock,
-        toBlock: 'latest',
-      });
+      while (toBlock > fromBlock) {
+        try {
+          // Ensure we don't exceed block range
+          const currentFromBlock = toBlock - MAX_BLOCKS_PER_CALL > fromBlock 
+            ? toBlock - MAX_BLOCKS_PER_CALL 
+            : fromBlock;
   
-      console.log("Logs fetched:", logs);
-      return logs;
+          console.log(`Fetching blocks ${currentFromBlock}-${toBlock}`);
+          
+          const logs = await publicClient.getLogs({
+            address: contractAddress,
+            event: parseAbiItem(
+              'event Predicted(address indexed user, bool prediction, uint256 amount)'
+            ),
+            fromBlock: currentFromBlock,
+            toBlock
+          });
+  
+          allLogs.push(...logs);
+          console.log('fetched logs:', logs); 
+          // Move to previous block range
+          toBlock = currentFromBlock - 1n;
+          
+          // Add small delay between calls
+          await new Promise(resolve => setTimeout(resolve, 50));
+        } catch (error) {
+          console.error(`Failed blocks ${fromBlock}-${toBlock}:`, error);
+          break;
+        }
+      }
+  
+      console.log("Total logs found:", allLogs.length);
+      return allLogs.reverse();
     } catch (error) {
-      console.error('Error fetching logs:', error);
+      console.error('Critical error:', error);
       return [];
     }
   }
