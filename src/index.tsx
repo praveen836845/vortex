@@ -22,7 +22,11 @@ export const config = createConfig({
     // walletConnect({ projectId: 'YOUR_WALLETCONNECT_PROJECT_ID' }), // If using WalletConnect
   ],
   transports: {
-    [flareTestnet.id]: http(), // Use public RPCs or your own (e.g., via Alchemy/Infura)
+    [flareTestnet.id]: http('https://coston2-api.flare.network/ext/C/rpc', {
+      timeout: 30_000,
+      retryCount: 3
+    }), // Use public RPCs or your own (e.g., via Alchemy/Infura)
+
     [mainnet.id]: http(),
     [sepolia.id]: http(), // Use public RPCs or your own (e.g., via Alchemy/Infura)
   },

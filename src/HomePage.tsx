@@ -16,6 +16,7 @@ import type { Address, Abi } from 'viem';
 import { form } from 'wagmi/chains';
 
 
+
 gsap.registerPlugin(ScrollTrigger);
 
 export default function HomePage() {

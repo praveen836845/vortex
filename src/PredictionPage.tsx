@@ -4,8 +4,11 @@ import { gsap } from 'gsap';
 import './PredictionPage.css';
 
 //////////////Web3 imports//////////////
-import { useWriteContract } from 'wagmi';
+import { usePublicClient, useWriteContract } from 'wagmi';
 import { parseEther, type Address } from 'viem';
+import { watchContractEvent } from '@wagmi/core'
+import { config } from './index' 
+import { parseAbiItem } from 'viem';
 
 // Mock data for the prediction markets
 const predictionData = {
@@ -51,6 +54,7 @@ export default function PredictionPage() {
   const [voteDirection, setVoteDirection] = useState<'up' | 'down' | null>(null);
   const [voteAmount, setVoteAmount] = useState('');
   const { writeContractAsync } = useWriteContract()
+  const [logs, setLogs] = useState('');
 
   const CRYPTO_POOL_ADDRESSES = {
     "BTC": "0x20d39847f01386820e30bc0af5e5733147e363dc",
@@ -238,6 +242,61 @@ export default function PredictionPage() {
     { "type": "error", "name": "StalePrice", "inputs": [] },
     { "type": "error", "name": "TransferFailed", "inputs": [] }
   ] as const;
+
+  const publicClient = usePublicClient();
+
+  const unwatch = watchContractEvent(config, {
+    address: CRYPTO_POOL_ADDRESSES[asset as keyof typeof CRYPTO_POOL_ADDRESSES] as Address,
+    abi: CRYPTO_POOL_ABI,
+    eventName: 'Predicted', 
+    onLogs(logs) {
+      console.log('Logs changed!', logs)
+    },
+  }) 
+
+  
+  async function fetchHistoricalLogs(contractAddress: `0x${string}`) {
+
+    
+    if (!publicClient) {
+      console.error('Public client not available');
+      return [];
+    }
+  
+    try {
+      // 1. Get latest block number
+      const latestBlock = await publicClient.getBlockNumber();
+      
+      // 2. Define batch size (30 blocks or less to comply with RPC limits)
+      const MAX_BLOCKS_PER_REQUEST = 30n;
+      let fromBlock = latestBlock - MAX_BLOCKS_PER_REQUEST;
+      fromBlock = fromBlock < 0n ? 0n : fromBlock;
+  
+      // 3. Fetch logs in batches
+      const logs = await publicClient.getLogs({
+        address: contractAddress,
+        event: parseAbiItem('event Predicted(address indexed user, bool prediction, uint256 amount)'),
+        fromBlock,
+        toBlock: 'latest',
+      });
+  
+      console.log("Logs fetched:", logs);
+      return logs;
+    } catch (error) {
+      console.error('Error fetching logs:', error);
+      return [];
+    }
+  }
+  
+  
+
+
+
+  useEffect(() => {
+    console.log('Watching for events...')
+    unwatch()
+    fetchHistoricalLogs(CRYPTO_POOL_ADDRESSES[asset as keyof typeof CRYPTO_POOL_ADDRESSES] as Address);
+  },[])
 
   const handlePredict = () => {
     if (!voteDirection || !voteAmount) return;
