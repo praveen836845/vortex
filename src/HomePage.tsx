@@ -1842,8 +1842,6 @@ const getTokenSymbol = (address: Address): string => {
   return token?.symbol || `Token`;
 };
 
-
-
   const { data: fetchedPairAddress, refetch: refetchFetchedPairAddress } = useReadContract({
     abi: FACTORY_ABI,
     address: FACTORY_ADDRESS,
@@ -2068,6 +2066,115 @@ const handleLiquidityAction = async () => {
   }
 };
 
+const handleSwapNew = async () => {
+  const loadingToast = toast.loading('Processing swap...');
+  
+  try {
+    if (!isConnected || !address) {
+      toast.error("Please connect your wallet first.");
+      return;
+    }
+
+    if (!swapFromAmount || Number(swapFromAmount) <= 0) {
+      toast.error("Please enter a valid amount to swap");
+      return;
+    }
+
+    if (selectedTokenA === selectedTokenB) {
+      toast.error("Cannot swap the same token");
+      return;
+    }
+
+    const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
+    const isETHInvolved = [selectedTokenA, selectedTokenB].includes(WETH_ADDRESS);
+    const amountIn = parseEther(swapFromAmount);
+    const amountOutMin = parseEther((Number(swapToAmount) * 0.99).toString()); // 1% slippage
+
+    // Handle different swap types
+    if (selectedTokenA === WETH_ADDRESS) {
+      // ETH -> Token
+      toast("Swapping ETH for tokens...", { icon: '🔃' });
+      const tx = await writeContractAsync({
+        abi: ROUTER_ABI,
+        address: ROUTER_ADDRESS,
+        functionName: 'swapExactETHForTokens',
+        args: [
+          amountOutMin,
+          [WETH_ADDRESS, selectedTokenB],
+          address,
+          BigInt(deadline)
+        ],
+        value: amountIn
+      });
+    } else if (selectedTokenB === WETH_ADDRESS) {
+      // Token -> ETH
+      toast("Approving token...", { icon: '🔃' });
+      await writeContractAsync({
+        address: selectedTokenA,
+        abi: ERC20_ABI,
+        functionName: 'approve',
+        args: [ROUTER_ADDRESS, amountIn]
+      });
+
+      toast("Swapping tokens for ETH...", { icon: '🔃' });
+      const tx = await writeContractAsync({
+        abi: ROUTER_ABI,
+        address: ROUTER_ADDRESS,
+        functionName: 'swapExactTokensForETH',
+        args: [
+          amountIn,
+          amountOutMin,
+          [selectedTokenA, WETH_ADDRESS],
+          address,
+          BigInt(deadline)
+        ]
+      });
+    } else {
+      // Token -> Token
+      toast("Approving token...", { icon: '🔃' });
+      await writeContractAsync({
+        address: selectedTokenA,
+        abi: ERC20_ABI,
+        functionName: 'approve',
+        args: [ROUTER_ADDRESS, amountIn]
+      });
+
+      toast("Swapping tokens...", { icon: '🔃' });
+      const tx = await writeContractAsync({
+        abi: ROUTER_ABI,
+        address: ROUTER_ADDRESS,
+        functionName: 'swapExactTokensForTokens',
+        args: [
+          amountIn,
+          amountOutMin,
+          [selectedTokenA, selectedTokenB],
+          address,
+          BigInt(deadline)
+        ]
+      });
+    }
+
+    toast.success(
+      <div>
+        <p>Swap executed successfully!</p>
+      </div>,
+      { duration: 8000 }
+    );
+
+    setSwapFromAmount('');
+    setSwapToAmount('');
+    
+  } catch (error) {
+    console.error("Error swapping tokens:", error);
+    toast.error(
+      `Error: ${error instanceof Error ? error.message : 'Swap failed'}`
+    );
+  } finally {
+    toast.dismiss(loadingToast);
+  }
+};
+
+
   // const handleRemoveLiquidity = async () => {
   //   const loadingToast = toast.loading('Removing liquidity...');
   //   try {
@@ -2264,74 +2371,13 @@ const handleLiquidityAction = async () => {
     functionName: 'getAmountsOut',
     args: [
       swapFromAmount ? parseEther(swapFromAmount) : BigInt(0),
-      [TOKEN_A_ADDRESS, TOKEN_B_ADDRESS],
+      [selectedTokenA, selectedTokenB],
     ],
     query: {
       enabled: false // We'll manually trigger this when needed
     }
   });
 
-  const handleAddLiquidity = async () => {
-    const loadingToast = toast.loading('Processing liquidity addition...');
-
-    try {
-      if (!isConnected || !address) {
-        toast.error("Please connect your wallet first.");
-        return;
-      }
-
-
-      toast("Approving tokens... (This may take a moment)", { icon: '🔃' });
-
-      const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
-      const amountADesired = parseEther(tokenAAmount);
-      const amountBDesired = parseEther(tokenBAmount);
-      const amountAMin = parseEther((parseFloat(tokenAAmount) * 0.99).toString());
-      const amountBMin = parseEther((parseFloat(tokenBAmount) * 0.99).toString());
-
-      const tx = await writeContractAsync({
-        abi: ROUTER_ABI,
-        address: ROUTER_ADDRESS,
-        functionName: 'addLiquidity',
-        args: [
-          TOKEN_A_ADDRESS,
-          TOKEN_B_ADDRESS,
-          amountADesired,
-          amountBDesired,
-          amountAMin,
-          amountBMin,
-          address,
-          BigInt(deadline)
-        ],
-      });
-
-      toast.success(
-        <div>
-          <p>Liquidity added successfully!</p>
-          <a
-            href={`https://testnet.flarescan.com/tx/${tx}`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{ color: '#4caf50', textDecoration: 'underline' }}
-          >
-            View on FlareTestnetScan
-          </a>
-        </div>,
-        { duration: 8000 }
-      );
-
-      setTokenAAmount('');
-      setTokenBAmount('');
-
-    } catch (error) {
-      console.error("Error adding liquidity:", error);
-      toast.error(
-        `Error: ${error instanceof Error ? error.message : 'Transaction failed'}`
-      );
-    } finally {
-      toast.dismiss(loadingToast);
-    }
-  };
 
   const handleSwap = async () => {
     const loadingToast = toast.loading('Processing swap...');
@@ -2533,7 +2579,7 @@ const handleLiquidityAction = async () => {
     }, 500); // Debounce to avoid too many requests
 
     return () => clearTimeout(debounceTimer);
-  }, [swapFromAmount, amountOutDataSwap, refetchAmountsOut]);
+  }, [selectedTokenA, selectedTokenB, refetchAmountsOut,swapFromAmount, tokenAAmount, tokenBAmount]);
 
   useEffect(() => {
     refetchAmountsOut();
@@ -3218,9 +3264,12 @@ const handleLiquidityAction = async () => {
                 />
               </div>
               <div className="rate-info">
-                <span>Pool Ratio: 1 {getTokenSymbol(selectedTokenA)} = 
+
+                {tokenAAmount?(<span>Pool Ratio: 1 {getTokenSymbol(selectedTokenA)} = 
                   {(Number(tokenBAmount)/Number(tokenAAmount)).toFixed(4)} {getTokenSymbol(selectedTokenB)}
-                </span>
+                </span>):("") }
+
+                
               </div>
             </>
           ) : (
@@ -3273,100 +3322,138 @@ const handleLiquidityAction = async () => {
 
         {/* Swap Section */}
         <div ref={swapSectionRef} className="section-container">
-          <div className="content-container">
-            <div className="section-content reverse">
-              <div className="swap-description">
-                <h2 className="gradient-text">Token Swaps</h2>
-                <p className="glow-text">
-                  <span className="flash-icon">⚡</span> Execute zero-gas, cross-chain swaps with <> </>
-                  <span >Flare-verified pricing</span> that aggregates liquidity from
-                  15+ DEXs. Our smart order routing dynamically calculates optimal paths
-                  to deliver <span className="highlight">0.1% better rates</span> than leading aggregators, with
-                  <span className="highlight">slippage protection up to $50k volumes</span>. Each trade is
-                  cryptographically verified against Flare's decentralized oracle network
-                  for <span className="highlight">front-running resistance</span> and MEV protection.
-                </p>
-                <div className="stats-grid">
-                  <div className="stat-item pulse-glow">
-                    <div className="stat-value">$1.2B</div>
-                    <div className="stat-label">24h Volume</div>
-                  </div>
-                  <div className="stat-item pulse-glow">
-                    <div className="stat-value">0.05%</div>
-                    <div className="stat-label">Average Fee</div>
-                  </div>
-                  <div className="stat-item pulse-glow">
-                    <div className="stat-value">12s</div>
-                    <div className="stat-label">Avg. Swap Time</div>
-                  </div>
-                </div>
+  <div className="content-container">
+    <div className="section-content reverse">
+      <div className="swap-description">
+        <h2 className="gradient-text">Token Swaps</h2>
+        <p className="glow-text">
+          <span className="flash-icon">⚡</span> Execute zero-gas, cross-chain swaps with <> </>
+          <span >Flare-verified pricing</span> that aggregates liquidity from
+          15+ DEXs. Our smart order routing dynamically calculates optimal paths
+          to deliver <span className="highlight">0.1% better rates</span> than leading aggregators, with
+          <span className="highlight">slippage protection up to $50k volumes</span>. Each trade is
+          cryptographically verified against Flare's decentralized oracle network
+          for <span className="highlight">front-running resistance</span> and MEV protection.
+        </p>
+        <div className="stats-grid">
+          <div className="stat-item pulse-glow">
+            <div className="stat-value">$1.2B</div>
+            <div className="stat-label">24h Volume</div>
+          </div>
+          <div className="stat-item pulse-glow">
+            <div className="stat-value">0.05%</div>
+            <div className="stat-label">Average Fee</div>
+          </div>
+          <div className="stat-item pulse-glow">
+            <div className="stat-value">12s</div>
+            <div className="stat-label">Avg. Swap Time</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="swap-card section-card neo-glass">
+        <div className="card-content">
+          <h2 className="card-title">Swap Tokens</h2>
+          <p className="card-subtitle">Get the best rates across DeFi</p>
+
+          <div className="card-actions">
+            <div className="swap-input-container neo-inset">
+              <input
+                type="number"
+                placeholder="0.0"
+                className="swap-amount-input"
+                value={swapFromAmount}
+                onChange={(e) => setSwapFromAmount(e.target.value)}
+              />
+              <div className="token-select-wrapper">
+                <select
+                  className="token-select-right"
+                  value={selectedTokenA}
+                  onChange={(e) => setSelectedTokenA(e.target.value as Address)}
+                >
+                  {TOKEN_LIST.map(token => (
+                    <option key={token.address} value={token.address}>
+                      {token.symbol}
+                    </option>
+                  ))}
+                </select>
+                <div className={`token-icon ${getTokenSymbol(selectedTokenA).toLowerCase()}-icon`} />
               </div>
+            </div>
 
-              <div className="swap-card section-card neo-glass">
-                <div className="card-content">
-                  <h2 className="card-title">Swap Tokens</h2>
-                  <p className="card-subtitle">Get the best rates across DeFi</p>
+            <div className="swap-arrow-container">
+              <button 
+                className="swap-arrow-circle"
+                onClick={() => {
+                  const temp = selectedTokenA;
+                  setSelectedTokenA(selectedTokenB);
+                  setSelectedTokenB(temp);
+                }}
+              >
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="swap-arrow-icon">
+                  <path d="M12 4V20M12 20L18 14M12 20L6 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+                </svg>
+              </button>
+            </div>
 
-                  <div className="card-actions">
-                    <div className="swap-input-container neo-inset">
-                      <input type="number" placeholder="0.0" className="swap-amount-input" onKeyUp={(e) => { setSwapFromAmount(e.target.value) }} />
-                      <div className="token-select-wrapper">
-                        <select className="token-select-right">
-                          <option value="ETH">ETH</option>
-                          <option value="BTC">BTC</option>
-                          <option value="USDC">USDC</option>
-                          <option value="DAI">DAI</option>
-                        </select>
-                        <div className="token-icon eth-icon"></div>
-                      </div>
-                    </div>
-
-                    <div className="swap-arrow-container">
-                      <div className="swap-arrow-circle">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="swap-arrow-icon">
-                          <path d="M12 4V20M12 20L18 14M12 20L6 14" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-                        </svg>
-                      </div>
-                    </div>
-
-                    <div className="swap-input-container neo-inset">
-                      <input type="number" placeholder="0.0" className="swap-amount-input" value={swapToAmount} />
-                      <div className="token-select-wrapper">
-                        <select className="token-select-right">
-                          <option value="USDC">USDC</option>
-                          <option value="ETH">ETH</option>
-                          <option value="BTC">BTC</option>
-                          <option value="DAI">DAI</option>
-                        </select>
-                        <div className="token-icon usdc-icon"></div>
-                      </div>
-                    </div>
-
-                    <button className="action-btn pulse" onClick={handleSwap}> {isCalculating ? <span>Calculating...</span> : <span>Swap Now</span>}
-
-                    </button>
-                  </div>
-
-                  <div className="rate-info">
-                    <span className="rate-label">Best rate:</span>
-                    <span className="rate-value">1 ETH = 1,850.42 USDC</span>
-                  </div>
-
-                  <div className="card-stats">
-                    <div className="stat">
-                      <span className="value">0.05%</span>
-                      <span className="label">Fee</span>
-                    </div>
-                    <div className="stat">
-                      <span className="value">$1.2B</span>
-                      <span className="label">Volume 24h</span>
-                    </div>
-                  </div>
-                </div>
+            <div className="swap-input-container neo-inset">
+              <input
+                type="number"
+                placeholder="0.0"
+                className="swap-amount-input"
+                value={swapToAmount}
+                readOnly
+              />
+              <div className="token-select-wrapper">
+                <select
+                  className="token-select-right"
+                  value={selectedTokenB}
+                  onChange={(e) => setSelectedTokenB(e.target.value as Address)}
+                >
+                  {TOKEN_LIST.map(token => (
+                    <option key={token.address} value={token.address}>
+                      {token.symbol}
+                    </option>
+                  ))}
+                </select>
+                <div className={`token-icon ${getTokenSymbol(selectedTokenB).toLowerCase()}-icon`} />
               </div>
+            </div>
+
+            <button
+              className="action-btn pulse"
+              onClick={handleSwapNew}
+              disabled={isCalculating || !swapFromAmount}
+            >
+              {isCalculating ? <span>Calculating...</span> : <span>Swap Now</span>}
+            </button>
+          </div>
+
+          <div className="rate-info">
+            <span className="rate-label">Best rate:</span>
+            <span className="rate-value">
+              1 {getTokenSymbol(selectedTokenA)} = 
+              {swapToAmount && swapFromAmount 
+                ? (Number(swapToAmount)/Number(swapFromAmount)).toFixed(4)
+                : '0.0000'} {getTokenSymbol(selectedTokenB)}
+            </span>
+          </div>
+
+          <div className="card-stats">
+            <div className="stat">
+              <span className="value">0.05%</span>
+              <span className="label">Fee</span>
+            </div>
+            <div className="stat">
+              <span className="value">$1.2B</span>
+              <span className="label">Volume 24h</span>
             </div>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+</div>
 
         {/* Prediction Section */}
 
