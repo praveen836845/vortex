@@ -1862,7 +1862,16 @@ const getTokenSymbol = (address: Address): string => {
     },
   });
 
+  const { data: reserves, refetch: refetchAmountsOut } = useReadContract({
+    abi: TOKEN_PAIR_ABI,
+    address: pairAddress as Address,
+    functionName: 'getReserves',
+    query: {
+      enabled: false // We'll manually trigger this when needed
+    }
+  });
 
+  
 useEffect(() => {
 
   refetchFetchedPairAddress();
@@ -1874,7 +1883,7 @@ useEffect(() => {
   setLpBalance(fetchedLpBalanceData);
 
 
-},[selectedTokenA, selectedTokenB, isAddLiquidity]);
+},[ isAddLiquidity, tokenAAmount, selectedTokenA, selectedTokenB]);
 
 const handleLiquidityAction = async () => {
   const loadingToast = toast.loading(
@@ -1885,7 +1894,7 @@ const handleLiquidityAction = async () => {
     if (!isConnected || !address) {
       toast.error("Please connect your wallet first.");
       return;
-    }
+    } 
 
     const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
     const isETHInvolved = [selectedTokenA, selectedTokenB].includes(WETH_ADDRESS);
@@ -2064,6 +2073,97 @@ const handleLiquidityAction = async () => {
     toast.dismiss(loadingToast);
   }
 };
+ 
+useEffect(() => {
+  // Define delay time (in milliseconds)
+  const DEBOUNCE_DELAY = 1000;
+
+  // --- Handle immediate clearing ---
+  // If tokenAAmount is empty, clear tokenBAmount immediately and do nothing else.
+  if (!tokenAAmount || tokenAAmount.trim() === '') {
+    console.log("Token A Amount is empty, clearing Token B Amount immediately.");
+    setTokenBAmount('');
+    return; // Stop processing for this effect run
+  }
+
+  // --- Setup Debounce Timer ---
+  // This function contains the core logic you want to debounce
+  const executeFetchAndCalculate = async () => {
+    console.log("Debounce delay finished. Fetching reserves and calculating...");
+ 
+    try {
+      refetchAmountsOut()
+        // Use the 'reserves' state which should be updated by the refetch
+        console.log("Reserves (state after refetch):", reserves);
+
+        const [reserveA, reserveB] = reserves || [BigInt(0), BigInt(0)];
+        console.log("Using Reserves:", reserveA?.toString(), reserveB?.toString());
+
+        // --- Calculation ---
+        const numericTokenAAmount = parseFloat(tokenAAmount); // Use the amount that triggered this effect
+
+        // Double-check conditions before calculating
+        if (isNaN(numericTokenAAmount) || numericTokenAAmount <= 0) {
+             console.log("Token A amount invalid after debounce delay. Clearing B.");
+             setTokenBAmount('');
+             return;
+        }
+
+        if (reserveA > BigInt(0) && reserveB > BigInt(0)) {
+            const numReserveA = Number(reserveA); // Convert BigInt for ratio calculation
+            const numReserveB = Number(reserveB);
+
+            if (numReserveA === 0) {
+                console.warn("Reserve A is zero, cannot calculate ratio.");
+                setTokenBAmount('');
+                return;
+            }
+
+            const ratio = numReserveB / numReserveA;
+            console.log("Calculating Token B amount...");
+            console.log("Token A Amount:", numericTokenAAmount);
+            console.log("Reserve A:", numReserveA);
+            console.log("Reserve B:", numReserveB);
+            console.log("Ratio:", ratio);
+
+            const calculatedB = (numericTokenAAmount * ratio).toFixed(18);
+            console.log("Calculated Token B amount =", calculatedB);
+            setTokenBAmount(calculatedB);
+        } else {
+            console.log("Skipping calculation: Invalid reserves.", reserveA?.toString(), reserveB?.toString());
+            setTokenBAmount(''); // Clear B if reserves are invalid
+        }
+    } catch (error) {
+        console.error("Error during debounced fetch/calculation:", error);
+        setTokenBAmount(''); // Clear B on error
+    }
+  };
+
+  // Set a timer to execute the function after the delay
+  console.log(`Setting ${DEBOUNCE_DELAY}ms debounce timer for amount: ${tokenAAmount}`);
+  const timerId = setTimeout(executeFetchAndCalculate, DEBOUNCE_DELAY);
+
+  // --- Cleanup Function ---
+  // Return a function that clears the timer. React runs this when:
+  // 1. The component unmounts.
+  // 2. *Before* the effect runs again due to dependency changes.
+  return () => {
+    console.log("Cleanup: Clearing timer ID:", timerId);
+    clearTimeout(timerId);
+  };
+
+}, [ 
+    tokenAAmount,
+    selectedTokenA,
+    selectedTokenB,
+    // Include stable functions/state setters if needed by ESLint rules,
+    // but the core trigger dependencies are usually sufficient.
+    setTokenBAmount,
+    // refetchFetchedPairAddress,
+    // refetchAmountsOut,
+    // fetchedPairAddress, // Usually derived, not a trigger
+    // reserves           // Usually derived, not a trigger
+]); // Keep dependencies focused on what should trigger the *start* of the debounce
 
 const handleSwapNew = async () => {
   const loadingToast = toast.loading('Processing swap...');
@@ -2175,16 +2275,9 @@ const handleSwapNew = async () => {
 
 
  
-  const { data: reserves, refetch: refetchAmountsOut } = useReadContract({
-    abi: TOKEN_PAIR_ABI,
-    address: pairAddress as Address,
-    functionName: 'getReserves',
-    query: {
-      enabled: false // We'll manually trigger this when needed
-    }
-  });
 
 
+ 
 
   const { data: amountOutDataSwap, refetch: refetchAmountsOutSwap } = useReadContract({
     abi: ROUTER_ABI,
@@ -2404,38 +2497,7 @@ const handleSwapNew = async () => {
     return () => clearTimeout(debounceTimer);
   }, [selectedTokenA, selectedTokenB, swapFromAmount]);
 
-  useEffect(() => {
-  
-    const hamdleFetchReserves = async () => {
-
-
-      const { data } = await refetchAmountsOut();
-      console.log("Reserves data:", data);
  
-    const [reserveA, reserveB] = data || [BigInt(0), BigInt(0)];
-
-    // Clear tokenBAmount if tokenAAmount is empty
-    if (!tokenAAmount || tokenAAmount === '') {
-      setTokenBAmount('');
-      return;
-    }
-
-    const ratio = Number(reserveB) / Number(reserveA);
-    console.log("Calculating Token B amount...");
-    console.log("Token A Amount:", tokenAAmount);
-    console.log("Reserve A:", reserveA);
-    console.log("Reserve B:", reserveB);
-
-    if (tokenAAmount && reserveA > 0 && reserveB > 0) {
-      console.log("Calculating Token B amount with reserves...");
-      const calculatedB = (parseFloat(tokenAAmount) * ratio).toFixed(18);
-      console.log(" Token B amount =", calculatedB);
-      setTokenBAmount(calculatedB)
-    }
-   
-  }
-  hamdleFetchReserves();
-  }, [tokenAAmount, selectedTokenA, selectedTokenB]);
 
 
 
@@ -2917,6 +2979,7 @@ const handleSwapNew = async () => {
     }
   }
 
+  console.log("Volume data:", tokenBAmount);
 
 
   return (
@@ -2956,7 +3019,7 @@ const handleSwapNew = async () => {
               <button onClick={() => scrollToSection(swapSectionRef)}>Swap Tokens</button>
               <button onClick={() => scrollToSection(predictionSectionRef)}>Prediction</button>
             </div>
-
+ 
             <div className="wallet-connect">
               {isConnected ? (
                 <button
