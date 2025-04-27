@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
-import { useParams, useNavigate , useLocation} from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { gsap } from 'gsap';
 import './PredictionPage.css';
 
 //////////////Web3 imports//////////////
-import { usePublicClient, useWriteContract } from 'wagmi';
+import { usePublicClient, useReadContract, useWriteContract } from 'wagmi';
 import { parseEther, type Address } from 'viem';
 import { watchContractEvent } from '@wagmi/core'
-import { config } from './index' 
+import { config } from './index'
 import { parseAbiItem } from 'viem';
 
 interface MarketData {
@@ -65,12 +65,16 @@ export default function PredictionPage() {
   const { writeContractAsync } = useWriteContract();
   const [isClaim, setIsClaim] = useState(true);
   const [logs, setLogs] = useState<LogEntry[]>([]);
+  const [marketResolved, setMarketResolved] = useState(false);
+  const [targetAmount, setTargetAmount] = useState('');
 
   const CRYPTO_POOL_ADDRESSES = {
     "BTC": "0x20d39847f01386820e30bc0af5e5733147e363dc",
     "FLR": "0x3ede4e9ebc046eefe822189573d44e378577ef10",
     "DOGE": "0x6ac56d3767009f42d3ab849fdb1b088d1a9143fc",
   }
+
+
 
   const CRYPTO_POOL_ABI = [
     {
@@ -276,37 +280,37 @@ export default function PredictionPage() {
   const unwatch = watchContractEvent(config, {
     address: CRYPTO_POOL_ADDRESSES[asset as keyof typeof CRYPTO_POOL_ADDRESSES] as Address,
     abi: CRYPTO_POOL_ABI,
-    eventName: 'Predicted', 
+    eventName: 'Predicted',
     onLogs(logs) {
       console.log('Logs changed!', logs)
     },
-  }) 
+  })
 
-  
+
   async function fetchHistoricalLogs(contractAddress: `0x${string}`) {
     if (!publicClient) {
       console.error('Public client not available');
       setLogs([]);
       return;
     }
-  
+
     try {
       const latestBlock = await publicClient.getBlockNumber();
       const MAX_BLOCKS_PER_CALL = 30n;
       const BLOCKS_TO_FETCH = 10000n;
-      
+
       let toBlock = latestBlock;
       let fromBlock = toBlock - BLOCKS_TO_FETCH;
       fromBlock = fromBlock < 0n ? 0n : fromBlock;
-      
+
       const allLogs: LogEntry[] = [];
-  
+
       while (toBlock > fromBlock) {
         try {
-          const currentFromBlock = toBlock - MAX_BLOCKS_PER_CALL > fromBlock 
-            ? toBlock - MAX_BLOCKS_PER_CALL 
+          const currentFromBlock = toBlock - MAX_BLOCKS_PER_CALL > fromBlock
+            ? toBlock - MAX_BLOCKS_PER_CALL
             : fromBlock;
-  
+
           const logs = await publicClient.getLogs({
             address: contractAddress,
             event: parseAbiItem(
@@ -315,14 +319,14 @@ export default function PredictionPage() {
             fromBlock: currentFromBlock,
             toBlock
           });
-  
+
           // Type assertion for the logs
           const typedLogs = logs as unknown as LogEntry[];
           allLogs.push(...typedLogs);
-          
+
           // Update state with spread operator for reactivity
           setLogs([...allLogs]);
-          console.log('Fetched logs:', allLogs);
+
           toBlock = currentFromBlock - 1n;
           await new Promise(resolve => setTimeout(resolve, 100));
         } catch (error) {
@@ -331,11 +335,10 @@ export default function PredictionPage() {
           break;
         }
       }
-  
+
       // Final update with reversed logs
       const reversedLogs = [...allLogs].reverse();
       setLogs(reversedLogs);
-      console.log('Fetched logs:', logs);
       return reversedLogs;
     } catch (error) {
       console.error('Critical error:', error);
@@ -343,20 +346,20 @@ export default function PredictionPage() {
       return [];
     }
   }
-  
+
 
   useEffect(() => {
     console.log('Watching for events...')
     unwatch()
     fetchHistoricalLogs(CRYPTO_POOL_ADDRESSES[asset as keyof typeof CRYPTO_POOL_ADDRESSES] as Address);
-  },[])
+  }, [])
 
   const handlePredict = () => {
     if (!voteDirection || !voteAmount) return;
-  
+
     // Convert ETH amount string to wei (BigInt)
     const amountInWei = parseEther(voteAmount);
-  
+
     writeContractAsync({
       abi: CRYPTO_POOL_ABI,
       address: CRYPTO_POOL_ADDRESSES[asset as keyof typeof CRYPTO_POOL_ADDRESSES] as Address,
@@ -370,7 +373,7 @@ export default function PredictionPage() {
       setVoteAmount('');
     }).catch(console.error);
   }
-  
+
 
 
   useEffect(() => {
@@ -399,52 +402,77 @@ export default function PredictionPage() {
       return;
     }
     setMarketData(data);
-      // Animation on load
-      gsap.from('.prediction-header', {
-        opacity: 0,
-        y: 50,
-        duration: 0.8,
-        ease: 'power3.out'
-      });
+    // Animation on load
+    gsap.from('.prediction-header', {
+      opacity: 0,
+      y: 50,
+      duration: 0.8,
+      ease: 'power3.out'
+    });
 
-      gsap.from('.market-details', {
-        opacity: 0,
-        x: -50,
-        duration: 0.8,
-        delay: 0.2,
-        ease: 'power3.out'
-      });
+    gsap.from('.market-details', {
+      opacity: 0,
+      x: -50,
+      duration: 0.8,
+      delay: 0.2,
+      ease: 'power3.out'
+    });
 
-      gsap.from('.vote-section', {
-        opacity: 0,
-        x: 50,
-        duration: 0.8,
-        delay: 0.4,
-        ease: 'power3.out'
-      });
+    gsap.from('.vote-section', {
+      opacity: 0,
+      x: 50,
+      duration: 0.8,
+      delay: 0.4,
+      ease: 'power3.out'
+    });
 
-      gsap.from('.votes-table', {
-        opacity: 0,
-        y: 50,
-        duration: 0.8,
-        delay: 0.6,
-        ease: 'power3.out'
-      });
-    
-  }, [asset, location.state , navigate]);
+    gsap.from('.votes-table', {
+      opacity: 0,
+      y: 50,
+      duration: 0.8,
+      delay: 0.6,
+      ease: 'power3.out'
+    });
 
-  const handleVote = () => {
-    if (voteDirection && voteAmount) {
-      // Here you would typically send the vote to your backend
-      alert(`Voted ${voteDirection} with ${voteAmount} ETH`);
-      // Reset form
-      setVoteDirection(null);
-      setVoteAmount('');
-    }
-  };
+  }, [asset, location.state, navigate]);
+
+  //////////////Claiming rewards and fetching logs from the contract//////////////
+
+
+  const { data: fetchedStats, refetch: refetchFetchedStats } = useReadContract({
+    address: CRYPTO_POOL_ADDRESSES[asset as keyof typeof CRYPTO_POOL_ADDRESSES] as Address,
+    abi: CRYPTO_POOL_ABI,
+    functionName: 'getConfig'
+  });
+
+
+  useEffect(() => {
+    const handleFetchedStats = async () => {
+      await refetchFetchedStats();
+      if (fetchedStats) {
+        setMarketResolved(fetchedStats[7] as boolean);
+   
+        setTargetAmount(Number(fetchedStats[0]).toString());
+        
+      }
+    };
+    handleFetchedStats()
+
+    console.log("Fetched stats: ", fetchedStats);
+  }, [])
+
+
+
+
+
+
+
+
+  /////////////////////////////////////////////////////////////////////////////////////
+
 
   if (!marketData) return <div className="loading">Loading...</div>;
-   console.log("checked>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> ",marketData );
+
   return (
     <div className="prediction-page">
       <button className="back-button" onClick={() => navigate('/')}>
@@ -465,30 +493,37 @@ export default function PredictionPage() {
               {marketData.change > 0 ? '+' : ''}{marketData.change}%
             </span>
           </div>
+
+          <h2>Targated Price</h2>
+          <div className="price-display">
+            <span className="current-price">${targetAmount}</span>
+          
+          
+          </div>
         </div>
-        {isClaim && (
-    <button 
-      className="claim-reward-btn"
-      onClick={() => {
-        writeContractAsync({
-          abi: CRYPTO_POOL_ABI,
-          address: CRYPTO_POOL_ADDRESSES[asset as keyof typeof CRYPTO_POOL_ADDRESSES] as Address,
-          functionName: 'claimRewards',
-        }).then(() => {
-          alert('Rewards claimed successfully!');
-          setIsClaim(false);
-        }).catch(console.error);
-      }}
-    >
-      Claim Reward
-    </button>
-  )}
+        {marketResolved ? (
+          <button
+            className="claim-reward-btn"
+            onClick={() => {
+              writeContractAsync({
+                abi: CRYPTO_POOL_ABI,
+                address: CRYPTO_POOL_ADDRESSES[asset as keyof typeof CRYPTO_POOL_ADDRESSES] as Address,
+                functionName: 'claimRewards',
+              }).then(() => {
+                alert('Rewards claimed successfully!');
+                setIsClaim(false);
+              }).catch(console.error);
+            }}
+          >
+            Claim Reward
+          </button>
+        ) : <h2> Market Status: 🟢</h2>}
 
 
         <div className="market-stats">
           <div className="stat-item">
             <div className="stat-label">24h Volume</div>
-            <div className="stat-value">${marketData.volume}</div>
+            <div className="stat-value">{marketData.volume} FLR</div>
           </div>
           <div className="stat-item">
             <div className="stat-label">Time Remaining</div>
@@ -529,14 +564,20 @@ export default function PredictionPage() {
             placeholder="Amount (ETH)"
             value={voteAmount}
             onChange={(e) => setVoteAmount(e.target.value)}
-          />
-          <button
+          />{marketResolved? (<button
+            className="submit-vote"
+            onClick={handlePredict}
+            disabled={!voteDirection || !voteAmount}
+          >
+            Market Resolved!
+          </button>): (<button
             className="submit-vote"
             onClick={handlePredict}
             disabled={!voteDirection || !voteAmount}
           >
             Submit Prediction
-          </button>
+          </button>)}
+
         </div>
 
         <div className="vote-stats">
@@ -556,35 +597,35 @@ export default function PredictionPage() {
       </div>
 
       <div className="votes-table-container">
-  <h2 className='votes-table-label'>Recent Predictions</h2>
-  <table className="votes-table">
-    <thead>
-      <tr>
-        <th>Voter</th>
-        <th>Amount</th>
-        <th>Prediction</th>
-      </tr>
-    </thead>
-    <tbody>
-      {logs.map((log) => (
-        <tr key={`${log.transactionHash}-${log.logIndex}`}>
-          <td>{log.args.user.slice(0, 6)}...{log.args.user.slice(-4)}</td>
-          <td>{(Number(log.args.amount) / 1e18).toFixed(2)} ETH</td>
-          <td>
-            <span className={`prediction-badge ${log.args.prediction ? 'up' : 'down'}`}>
-              {log.args.prediction ? 'Up' : 'Down'}
-            </span>
-          </td>
-        </tr>
-      ))}
-    </tbody>
-  </table>
-  {logs.length <= 10 && (
-    <div className="no-predictions">
-      {/* Fetching predictions...  Please wait a moment.<br /> */}
-    </div>
-  )}
-</div>
+        <h2 className='votes-table-label'>Recent Predictions</h2>
+        <table className="votes-table">
+          <thead>
+            <tr>
+              <th>Voter</th>
+              <th>Amount</th>
+              <th>Prediction</th>
+            </tr>
+          </thead>
+          <tbody>
+            {logs.map((log) => (
+              <tr key={`${log.transactionHash}-${log.logIndex}`}>
+                <td>{log.args.user.slice(0, 6)}...{log.args.user.slice(-4)}</td>
+                <td>{(Number(log.args.amount) / 1e18).toFixed(2)} ETH</td>
+                <td>
+                  <span className={`prediction-badge ${log.args.prediction ? 'up' : 'down'}`}>
+                    {log.args.prediction ? 'Up' : 'Down'}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {logs.length <= 10 && (
+          <div className="no-predictions">
+            {/* Fetching predictions...  Please wait a moment.<br /> */}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
