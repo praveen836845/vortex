@@ -1738,7 +1738,7 @@ export default function HomePage() {
     }
   ] as const;
 
-  const ERC20_ABI = [
+   const ERC20_ABI = [
     {
       "constant": true,
       "inputs": [{"name": "owner", "type": "address"}],
@@ -1815,9 +1815,9 @@ export default function HomePage() {
 
 
   const TOKEN_LIST = [
-    { symbol: 'WEI(ETH)', address: '0xEd5A496758f8a8d45eBC50a6776452379ae71Ffe' }, // Representing native ETH
-    { symbol: 'MTK2', address: '0x81960374004ca95499a720027f76c04871e0DFC2' },
-    { symbol: 'MTK1', address: '0x63599aE00A7A43FaDBc2B72E1390ccbCdd0d455B' },
+    { symbol: 'C2FLR', address: '0xEd5A496758f8a8d45eBC50a6776452379ae71Ffe' }, // Representing native ETH
+    { symbol: 'FLRDown2', address: '0x81960374004ca95499a720027f76c04871e0DFC2' },
+    { symbol: 'FLRUp1', address: '0x63599aE00A7A43FaDBc2B72E1390ccbCdd0d455B' },
 
 
   ];
@@ -3098,119 +3098,121 @@ const handleSwapNew = async () => {
         </div>
       </div>
 
-      <div className="liquidity-card section-card">
-        <div className="card-content">
-          <div className="liquidity-toggle">
-            <button 
-              className={`toggle-btn ${isAddLiquidity ? 'active' : ''}`}
-              onClick={() => setIsAddLiquidity(true)}
-            >
-              Add
-            </button>
-            <button 
-              className={`toggle-btn ${!isAddLiquidity ? 'active' : ''}`}
-              onClick={() => setIsAddLiquidity(false)}
-            >
-              Remove
-            </button>
-          </div>
+      <div className="liquidity-card-mod section-card">
+  <div className="card-content">
+    <div className="liquidity-toggle-mod">
+      <button 
+        className={`liquidity-toggle-btn-mod ${isAddLiquidity ? 'liquidity-toggle-btn-active-mod' : ''}`}
+        onClick={() => setIsAddLiquidity(true)}
+      >
+        Add
+      </button>
+      <button 
+        className={`liquidity-toggle-btn-mod ${!isAddLiquidity ? 'liquidity-toggle-btn-active-mod' : ''}`}
+        onClick={() => setIsAddLiquidity(false)}
+      >
+        Remove
+      </button>
+    </div>
 
-          <h2>{isAddLiquidity ? 'Add' : 'Remove'} Liquidity</h2>
-          
-          <div className="token-selectors">
-            <select 
-              value={selectedTokenA}
-              onChange={(e) => setSelectedTokenA(e.target.value as Address)}
-              disabled={!isAddLiquidity}
-            >
-              {TOKEN_LIST.map(token => (
-                <option key={token.address} value={token.address}>
-                  {token.symbol}
-                </option>
-              ))}
-            </select>
-            <select 
-              value={selectedTokenB}
-              onChange={(e) => setSelectedTokenB(e.target.value as Address)}
-              disabled={!isAddLiquidity}
-            >
-              {TOKEN_LIST.map(token => (
-                <option key={token.address} value={token.address}>
-                  {token.symbol}
-                </option>
-              ))}
-            </select>
-          </div>
+    <h2>{isAddLiquidity ? 'Add' : 'Remove'} Liquidity</h2>
+    
+    <div className="token-select-wrapper-mod">
+      <select
+        className={`token-select-mod ${!isAddLiquidity ? 'token-select-disabled-mod' : ''}`}
+        value={selectedTokenA}
+        onChange={(e) => setSelectedTokenA(e.target.value as Address)}
+        disabled={!isAddLiquidity}
+      >
+        {TOKEN_LIST.map(token => (
+          <option key={token.address} value={token.address}>
+            {token.symbol}
+          </option>
+        ))}
+      </select>
+      <select 
+        className={`token-select-mod ${!isAddLiquidity ? 'token-select-disabled-mod' : ''}`}
+        value={selectedTokenB}
+        onChange={(e) => setSelectedTokenB(e.target.value as Address)}
+        disabled={!isAddLiquidity}
+      >
+        {TOKEN_LIST.map(token => (
+          <option key={token.address} value={token.address}>
+            {token.symbol}
+          </option>
+        ))}
+      </select>
+    </div>
 
-          {isAddLiquidity ? (
-            <>
-              <div className="card-actions">
-                <input
-                  type="number"
-                  placeholder={`${getTokenSymbol(selectedTokenA)} Amount`}
-                  value={tokenAAmount}
-                  onChange={(e) => setTokenAAmount(e.target.value)}
-                />
-                <input
-                  type="number"
-                  placeholder={`${getTokenSymbol(selectedTokenB)} Amount`}
-                  value={tokenBAmount}
-                  readOnly
-                />
-              </div>
-              <div className="rate-info">
-
-                {tokenAAmount?(<span>Pool Ratio: 1 {getTokenSymbol(selectedTokenA)} = 
-                  {(Number(tokenBAmount)/Number(tokenAAmount)).toFixed(4)} {getTokenSymbol(selectedTokenB)}
-                </span>):("") }
-
-                
-              </div>
-            </>
-          ) : (
-            <>
-              <div className="lp-info">
-                <span>  Available LP: {formatEther((lpBalance as bigint) || 0n)}</span>
-                <input
-                  type="number"
-                  placeholder="LP Token Amount"
-                  value={lpAmount}
-                  onChange={(e) => setLpAmount(e.target.value)}
-                  max={Number(formatEther((lpBalance as bigint) || 0n))}
-                />
-              </div>
-              <div className="expected-returns">
-                <span>You will receive:</span>
-                <span>{tokenAAmount} {getTokenSymbol(selectedTokenA)}</span>
-                <span>{tokenBAmount} {getTokenSymbol(selectedTokenB)}</span>
-              </div>
-            </>
-          )}
-
-          <button 
-            className="action-btn pulse" 
-            onClick={handleLiquidityAction}
-            disabled={!isAddLiquidity && Number(lpAmount) <= 0}
-          >
-            {isAddLiquidity ? 'Add Liquidity' : 'Remove Liquidity'}
-          </button>
-
-          <div className="card-stats">
-            <div className="stat">
-              <span className="value">
-                {isAddLiquidity ? '$42.8B' : `${formatEther((lpBalance as bigint) || 0n)} LP`}
-              </span>
-              <span className="label">
-                {isAddLiquidity ? 'Total Locked' : 'Your Stake'}
-              </span>
-            </div>
-            <div className="stat">
-              <span className="value">12-48%</span>
-              <span className="label">APY Range</span>
-            </div>
-          </div>
+    {isAddLiquidity ? (
+      <>
+        <div className="liquidity-input-group-mod">
+          <input
+            type="number"
+            className="liquidity-input-mod"
+            placeholder={`${getTokenSymbol(selectedTokenA)} Amount`}
+            value={tokenAAmount}
+            onChange={(e) => setTokenAAmount(e.target.value)}
+          />
+          <input
+            type="number"
+            className="liquidity-input-mod"
+            placeholder={`${getTokenSymbol(selectedTokenB)} Amount`}
+            value={tokenBAmount}
+            readOnly
+          />
         </div>
+        <div className="liquidity-info-mod">
+          <span>Pool Ratio: 1 {getTokenSymbol(selectedTokenA)} = 
+            {(Number(tokenBAmount)/Number(tokenAAmount)).toFixed(4)} {getTokenSymbol(selectedTokenB)}
+          </span>
+        </div>
+      </>
+    ) : (
+      <>
+        <div className="liquidity-input-group-mod">
+          <span>Available LP: {formatEther((lpBalance as bigint) || 0n)}</span>
+          <input
+            type="number"
+            className="liquidity-input-mod"
+            placeholder="LP Token Amount"
+            value={lpAmount}
+            onChange={(e) => setLpAmount(e.target.value)}
+            max={Number(formatEther((lpBalance as bigint) || 0n))}
+          />
+        </div>
+        <div className="liquidity-info-mod">
+          <span>You will receive:</span>
+          <span>{tokenAAmount} {getTokenSymbol(selectedTokenA)}</span>
+          <span>{tokenBAmount} {getTokenSymbol(selectedTokenB)}</span>
+        </div>
+      </>
+    )}
+
+    <button 
+      className={`liquidity-action-btn-mod ${(!isAddLiquidity && Number(lpAmount) <= 0) ? 'liquidity-action-btn-disabled-mod' : ''}`}
+      onClick={handleLiquidityAction}
+      disabled={!isAddLiquidity && Number(lpAmount) <= 0}
+    >
+      {isAddLiquidity ? 'Add Liquidity' : 'Remove Liquidity'}
+    </button>
+
+    <div className="liquidity-stats-mod">
+      <div className="liquidity-stat-mod">
+        <span className="liquidity-stat-value-mod">
+          {isAddLiquidity ? '$42.8B' : `${formatEther((lpBalance as bigint) || 0n)} LP`}
+        </span>
+        <span className="liquidity-stat-label-mod">
+          {isAddLiquidity ? 'Total Locked' : 'Your Stake'}
+        </span>
       </div>
+      <div className="liquidity-stat-mod">
+        <span className="liquidity-stat-value-mod">12-48%</span>
+        <span className="liquidity-stat-label-mod">APY Range</span>
+      </div>
+    </div>
+  </div>
+</div>
     </div>
   </div>
 </div>

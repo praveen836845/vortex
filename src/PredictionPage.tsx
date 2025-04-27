@@ -4,11 +4,11 @@ import { gsap } from 'gsap';
 import './PredictionPage.css';
 
 //////////////Web3 imports//////////////
-import { usePublicClient, useReadContract, useWriteContract } from 'wagmi';
+import { usePublicClient, useReadContract, useWriteContract , useAccount } from 'wagmi';
 import { parseEther, type Address } from 'viem';
 import { watchContractEvent } from '@wagmi/core'
 import { config } from './index'
-import { parseAbiItem } from 'viem';
+import { parseAbiItem , formatEther} from 'viem';
 
 interface MarketData {
   currentPrice: number;
@@ -55,6 +55,82 @@ const votingData = Array(10).fill(0).map((_, i) => ({
   timestamp: `${Math.floor(Math.random() * 24)}h ${Math.floor(Math.random() * 60)}m ago`
 }));
 
+const ERC20_ABI = [
+  {
+    "constant": true,
+    "inputs": [{"name": "owner", "type": "address"}],
+    "name": "balanceOf",
+    "outputs": [{"name": "", "type": "uint256"}],
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {"name": "spender", "type": "address"},
+      {"name": "amount", "type": "uint256"}
+    ],
+    "name": "approve",
+    "outputs": [{"name": "", "type": "bool"}],
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "decimals",
+    "outputs": [{"name": "", "type": "uint8"}],
+    "type": "function"
+  },
+  {
+    "constant": true,
+    "inputs": [],
+    "name": "symbol",
+    "outputs": [{"name": "", "type": "string"}],
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {"name": "recipient", "type": "address"},
+      {"name": "amount", "type": "uint256"}
+    ],
+    "name": "transfer",
+    "outputs": [{"name": "", "type": "bool"}],
+    "type": "function"
+  },
+  {
+    "constant": false,
+    "inputs": [
+      {"name": "sender", "type": "address"},
+      {"name": "recipient", "type": "address"},
+      {"name": "amount", "type": "uint256"}
+    ],
+    "name": "transferFrom",
+    "outputs": [{"name": "", "type": "bool"}],
+    "type": "function"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": true, "name": "owner", "type": "address"},
+      {"indexed": true, "name": "spender", "type": "address"},
+      {"indexed": false, "name": "value", "type": "uint256"}
+    ],
+    "name": "Approval",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": true, "name": "from", "type": "address"},
+      {"indexed": true, "name": "to", "type": "address"},
+      {"indexed": false, "name": "value", "type": "uint256"}
+    ],
+    "name": "Transfer",
+    "type": "event"
+  }
+] as const; 
+
+
 export default function PredictionPage() {
   const { asset } = useParams();
   const navigate = useNavigate();
@@ -67,6 +143,16 @@ export default function PredictionPage() {
   const [logs, setLogs] = useState<LogEntry[]>([]);
   const [marketResolved, setMarketResolved] = useState(false);
   const [targetAmount, setTargetAmount] = useState('');
+  const [tokenAddresses, setTokenAddresses] = useState<{
+    up: Address | null;
+    down: Address | null;
+  }>({ up: null, down: null });
+  
+  const [balances, setBalances] = useState<{
+    up: bigint | null;
+    down: bigint | null;
+  }>({ up: null, down: null });
+
 
   const CRYPTO_POOL_ADDRESSES = {
     "BTC": "0x20d39847f01386820e30bc0af5e5733147e363dc",
@@ -258,6 +344,7 @@ export default function PredictionPage() {
   ] as const;
 
   const publicClient = usePublicClient();
+  const {account} = useAccount();
 
   interface LogEntry {
     address: string;
@@ -347,6 +434,47 @@ export default function PredictionPage() {
     }
   }
 
+  const { data: tokensData } = useReadContract({
+    abi: CRYPTO_POOL_ABI,
+    address: CRYPTO_POOL_ADDRESSES[asset as keyof typeof CRYPTO_POOL_ADDRESSES],
+    functionName: 'getTokens',
+  });
+
+  // 2. Update token addresses when data comes in
+  useEffect(() => {
+    if (tokensData) {
+      setTokenAddresses({
+        up: tokensData[0],
+        down: tokensData[3]
+      });
+    }
+  }, [tokensData]);
+
+  // 3. Fetch balances only when addresses are available
+  const { data: upBalance } = useReadContract({
+    abi: ERC20_ABI,
+    address: tokenAddresses.up as Address,
+    functionName: 'balanceOf',
+    args:['0x0af700A3026adFddC10f7Aa8Ba2419e8503592f7'],
+  });
+
+  const { data: downBalance } = useReadContract({
+    abi: ERC20_ABI,
+    address: tokenAddresses.down as Address,
+    functionName: 'balanceOf',
+    args: ['0x0af700A3026adFddC10f7Aa8Ba2419e8503592f7'],
+  });
+
+  // 4. Update balances state when new data arrives
+  useEffect(() => {
+    setBalances(prev => ({
+      ...prev,
+      ...(upBalance !== undefined && { up: upBalance }),
+      ...(downBalance !== undefined && { down: downBalance })
+    }));
+  }, [upBalance, downBalance]);
+
+  console.log("Balanceof " , balances , account);
 
   useEffect(() => {
     console.log('Watching for events...')
@@ -496,10 +624,12 @@ export default function PredictionPage() {
 
           <h2>Targated Price</h2>
           <div className="price-display">
-            <span className="current-price">${targetAmount}</span>
-          
-          
+            <span className="current-price">${formatEther(targetAmount)}</span>
           </div>
+          <div>
+  Balance of Token Up: {balances.up ? formatEther(balances.up) : ''}   ' '
+  And Down Tokens: {balances.down ? formatEther(balances.down) : ''}
+</div>
         </div>
         {marketResolved ? (
           <button
@@ -517,7 +647,7 @@ export default function PredictionPage() {
           >
             Claim Reward
           </button>
-        ) : <h2> Market Status: 🟢</h2>}
+        ) : <h2 className='Status_ActivePredication'> Market Status: 🟢</h2>}
 
 
         <div className="market-stats">
