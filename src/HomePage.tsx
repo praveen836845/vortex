@@ -1815,13 +1815,14 @@ export default function HomePage() {
 
 
   const TOKEN_LIST = [
-    { symbol: 'ETH', address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE' }, // Representing native ETH
-    { symbol: 'DAI', address: '0x63599aE00A7A43FaDBc2B72E1390ccbCdd0d455B' },
-    { symbol: 'USDC', address: '0x81960374004ca95499a720027f76c04871e0DFC2' },
-    { symbol: 'WBTC', address: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599' },
+    { symbol: 'WEI(ETH)', address: '0xEd5A496758f8a8d45eBC50a6776452379ae71Ffe' }, // Representing native ETH
+    { symbol: 'MTK2', address: '0x81960374004ca95499a720027f76c04871e0DFC2' },
+    { symbol: 'MTK1', address: '0x63599aE00A7A43FaDBc2B72E1390ccbCdd0d455B' },
+
+
   ];
 
-  const WETH_ADDRESS = '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE' as Address
+  const WETH_ADDRESS = '0xEd5A496758f8a8d45eBC50a6776452379ae71Ffe' as Address
 
 
   const [isAddLiquidity, setIsAddLiquidity] = useState(true);
@@ -1872,9 +1873,6 @@ useEffect(() => {
   
   setLpBalance(fetchedLpBalanceData);
 
-  console.log("account address =",address!);
-  console.log("address and balance",pairAddress, lpBalance);
-
 
 },[selectedTokenA, selectedTokenB, isAddLiquidity]);
 
@@ -1924,9 +1922,10 @@ const handleLiquidityAction = async () => {
             functionName: 'approve',
             args: [ROUTER_ADDRESS, parseEther(erc20Amount)]
           });
-    
+         
           // Add liquidity with ETH
           toast("Adding liquidity with ETH...", { icon: '🔃' });
+          console.log(" Params ",   parseEther(erc20Amount),parseEther((Number(erc20Amount) * 0.99).toString()), parseEther((Number(ethAmount) * 0.99).toString()), parseEther(ethAmount));
           const tx = await writeContractAsync({
             abi: ROUTER_ABI,
             address: ROUTER_ADDRESS,
@@ -1934,8 +1933,8 @@ const handleLiquidityAction = async () => {
             args: [
               erc20Token,
               parseEther(erc20Amount),
-              parseEther((Number(erc20Amount) * 0.99).toString()),
-              parseEther((Number(ethAmount) * 0.99).toString()),
+              parseEther((Number(erc20Amount) * 0.99).toString()), // FIX: ensure correct decimals
+              parseEther((Number(ethAmount) * 0.99).toString()),   // FIX: ensure correct decimals
               address,
               BigInt(deadline)
             ],
@@ -2175,188 +2174,10 @@ const handleSwapNew = async () => {
 };
 
 
-  // const handleRemoveLiquidity = async () => {
-  //   const loadingToast = toast.loading('Removing liquidity...');
-  //   try {
-  //     if (!isConnected || !address) {
-  //       toast.error("Please connect your wallet first.");
-  //       return;
-  //     }
-  
-  //     const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
-  //     const liquidity = parseEther(lpAmount);
-      
-  //     // Check if ETH is involved in the pair
-  //     const isETHInvolved = [selectedTokenA, selectedTokenB].includes(WETH_ADDRESS);
-  
-  //     if (isETHInvolved) {
-  //       // Determine which token is WETH (ETH)
-  //       const token = selectedTokenA === WETH_ADDRESS ? selectedTokenB : selectedTokenA;
-  //       const amountTokenMin = parseEther((parseFloat(tokenAAmount) * 0.99).toString());
-  //       const amountETHMin = parseEther((parseFloat(tokenBAmount) * 0.99).toString());
-  
-  //       const tx = await writeContractAsync({
-  //         abi: ROUTER_ABI,
-  //         address: ROUTER_ADDRESS,
-  //         functionName: 'removeLiquidityETH',
-  //         args: [
-  //           token,
-  //           liquidity,
-  //           amountTokenMin,
-  //           amountETHMin,
-  //           address,
-  //           BigInt(deadline)
-  //         ],
-  //       });
-  //     } else {
-  //       // Standard token removal
-  //       const amountAMin = parseEther((parseFloat(tokenAAmount) * 0.99).toString());
-  //       const amountBMin = parseEther((parseFloat(tokenBAmount) * 0.99).toString());
-  
-  //       const tx = await writeContractAsync({
-  //         abi: ROUTER_ABI,
-  //         address: ROUTER_ADDRESS,
-  //         functionName: 'removeLiquidity',
-  //         args: [
-  //           selectedTokenA,
-  //           selectedTokenB,
-  //           liquidity,
-  //           amountAMin,
-  //           amountBMin,
-  //           address,
-  //           BigInt(deadline)
-  //         ],
-  //       });
-  //     }
-  
-  //     // Success handling...
-  //   } catch (error) {
-  //     // Error handling...
-  //   } finally {
-  //     toast.dismiss(loadingToast);
-  //   }
-  // };
-
-  // const handleAddLiquidity = async () => {
-  //   const loadingToast = toast.loading('Processing liquidity addition...');
-    
-  //   try {
-  //     if (!isConnected || !address) {
-  //       toast.error("Please connect your wallet first.");
-  //       return;
-  //     }
-  
-  //     const deadline = Math.floor(Date.now() / 1000) + 60 * 20;
-  //     const isETHInvolved = [selectedTokenA, selectedTokenB].includes(WETH_ADDRESS);
-  
-  //     if (isETHInvolved) {
-  //       // Handle ETH liquidity addition
-  //       const [ethToken, erc20Token] = 
-  //         selectedTokenA === WETH_ADDRESS 
-  //           ? [selectedTokenA, selectedTokenB] 
-  //           : [selectedTokenB, selectedTokenA];
-  
-  //       const [ethAmount, erc20Amount] = 
-  //         selectedTokenA === WETH_ADDRESS 
-  //           ? [tokenAAmount, tokenBAmount] 
-  //           : [tokenBAmount, tokenAAmount];
-  
-  //       // Approve ERC20 token
-  //       toast("Approving ERC20 token...", { icon: '🔃' });
-  //       await writeContractAsync({
-  //         address: erc20Token,
-  //         abi: ERC20_ABI,
-  //         functionName: 'approve',
-  //         args: [ROUTER_ADDRESS, parseEther(erc20Amount)]
-  //       });
-  
-  //       // Add liquidity with ETH
-  //       toast("Adding liquidity with ETH...", { icon: '🔃' });
-  //       const tx = await writeContractAsync({
-  //         abi: ROUTER_ABI,
-  //         address: ROUTER_ADDRESS,
-  //         functionName: 'addLiquidityETH',
-  //         args: [
-  //           erc20Token,
-  //           parseEther(erc20Amount),
-  //           parseEther((Number(erc20Amount) * 0.99).toString()),
-  //           parseEther((Number(ethAmount) * 0.99).toString()),
-  //           address,
-  //           BigInt(deadline)
-  //         ],
-  //         value: parseEther(ethAmount)
-  //       });
-  
-  //     } else {
-  //       // Handle ERC20 token pair
-  //       toast("Approving tokens...", { icon: '🔃' });
-  //       await Promise.all([
-  //         writeContractAsync({
-  //           address: selectedTokenA,
-  //           abi: ERC20_ABI,
-  //           functionName: 'approve',
-  //           args: [ROUTER_ADDRESS, parseEther(tokenAAmount)]
-  //         }),
-  //         writeContractAsync({
-  //           address: selectedTokenB,
-  //           abi: ERC20_ABI,
-  //           functionName: 'approve',
-  //           args: [ROUTER_ADDRESS, parseEther(tokenBAmount)]
-  //         })
-  //       ]);
-  
-  //       // Add liquidity with ERC20 tokens
-  //       toast("Adding liquidity...", { icon: '🔃' });
-  //       const tx = await writeContractAsync({
-  //         abi: ROUTER_ABI,
-  //         address: ROUTER_ADDRESS,
-  //         functionName: 'addLiquidity',
-  //         args: [
-  //           selectedTokenA,
-  //           selectedTokenB,
-  //           parseEther(tokenAAmount),
-  //           parseEther(tokenBAmount),
-  //           parseEther((Number(tokenAAmount) * 0.99).toString()),
-  //           parseEther((Number(tokenBAmount) * 0.99).toString()),
-  //           address,
-  //           BigInt(deadline)
-  //         ]
-  //       });
-  //     }
-  
-  //     toast.success(
-  //       <div>
-  //         <p>Liquidity added successfully!</p>
-  //         <a 
-  //           href={`https://testnet.flarescan.com/tx/${tx}`} 
-  //           target="_blank" 
-  //           rel="noopener noreferrer"
-  //           style={{ color: '#4caf50', textDecoration: 'underline' }}
-  //         >
-  //           View on FlareTestnetScan
-  //         </a>
-  //       </div>,
-  //       { duration: 8000 }
-  //     );
-  
-  //     setTokenAAmount('');
-  //     setTokenBAmount('');
-      
-  //   } catch (error) {
-  //     console.error("Error adding liquidity:", error);
-  //     toast.error(
-  //       `Error: ${error instanceof Error ? error.message : 'Transaction failed'}`
-  //     );
-  //   } finally {
-  //     toast.dismiss(loadingToast);
-  //   }
-  // };
-
-  /////////////////Web3 Functions///////////////////////
-  
+ 
   const { data: reserves, refetch: refetchAmountsOut } = useReadContract({
     abi: TOKEN_PAIR_ABI,
-    address: TOKEN_POOL_ADDRESS,
+    address: pairAddress as Address,
     functionName: 'getReserves',
     query: {
       enabled: false // We'll manually trigger this when needed
@@ -2557,13 +2378,17 @@ const handleSwapNew = async () => {
       setSwapToAmount('');
       return;
     }
+  
     const calculateTokenBAmount = async () => {
       try {
         setIsCalculating(true);
-        await refetchAmountsOutSwap();
-        console.log("sawp to amount", amountOutDataSwap);
-        if (amountOutDataSwap && amountOutDataSwap.length > 1) {
-          const amountB = formatEther(amountOutDataSwap[1]);
+        
+        // Get fresh data directly from the refetch response
+        const { data: freshAmountData } = await refetchAmountsOutSwap();
+        
+        console.log("swap to amount", freshAmountData);
+        if (freshAmountData && freshAmountData.length > 1) {
+          const amountB = formatEther(freshAmountData[1]);
           setSwapToAmount(amountB);
         }
       } catch (error) {
@@ -2573,17 +2398,21 @@ const handleSwapNew = async () => {
         setIsCalculating(false);
       }
     };
-
-    const debounceTimer = setTimeout(() => {
-      calculateTokenBAmount();
-    }, 500); // Debounce to avoid too many requests
-
+  
+    // Add basic debouncing
+    const debounceTimer = setTimeout(calculateTokenBAmount, 300);
     return () => clearTimeout(debounceTimer);
-  }, [selectedTokenA, selectedTokenB, refetchAmountsOut,swapFromAmount, tokenAAmount, tokenBAmount]);
+  }, [selectedTokenA, selectedTokenB, swapFromAmount]);
 
   useEffect(() => {
-    refetchAmountsOut();
-    const [reserveA, reserveB] = reserves || [BigInt(0), BigInt(0)];
+  
+    const hamdleFetchReserves = async () => {
+
+
+      const { data } = await refetchAmountsOut();
+      console.log("Reserves data:", data);
+ 
+    const [reserveA, reserveB] = data || [BigInt(0), BigInt(0)];
 
     // Clear tokenBAmount if tokenAAmount is empty
     if (!tokenAAmount || tokenAAmount === '') {
@@ -2600,9 +2429,13 @@ const handleSwapNew = async () => {
     if (tokenAAmount && reserveA > 0 && reserveB > 0) {
       console.log("Calculating Token B amount with reserves...");
       const calculatedB = (parseFloat(tokenAAmount) * ratio).toFixed(18);
-      setTokenBAmount(calculatedB);
+      console.log(" Token B amount =", calculatedB);
+      setTokenBAmount(calculatedB)
     }
-  }, [tokenAAmount, reserves, refetchAmountsOut]);
+   
+  }
+  hamdleFetchReserves();
+  }, [tokenAAmount, selectedTokenA, selectedTokenB]);
 
 
 
@@ -3003,7 +2836,6 @@ const handleSwapNew = async () => {
     return parts.join(' ');
   };
 
-  console.log("test for deadline", formatTimestamp("1720216800"))
 
   useEffect(() => {
     handleTimestamps();
