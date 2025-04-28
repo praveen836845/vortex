@@ -447,34 +447,39 @@ export default function PredictionPage() {
         up: tokensData[0],
         down: tokensData[3]
       });
+      console.log("Token addresses: ", tokensData[0],"and",tokensData[3]);
+      console.log("Token Data", tokensData)
     }
   }, [tokensData]);
 
   // 3. Fetch balances only when addresses are available
-  const { data: upBalance } = useReadContract({
+  const { data: upBalance, refetch: refetchBalanceUp } = useReadContract({
     abi: ERC20_ABI,
     address: tokenAddresses.up as Address,
     functionName: 'balanceOf',
-    args:['0x0af700A3026adFddC10f7Aa8Ba2419e8503592f7'],
+    args:[address as Address],
   });
 
-  const { data: downBalance } = useReadContract({
+  const { data: downBalance, refetch: refetchBalanceDown } = useReadContract({
     abi: ERC20_ABI,
     address: tokenAddresses.down as Address,
     functionName: 'balanceOf',
-    args: ['0x0af700A3026adFddC10f7Aa8Ba2419e8503592f7'],
+    args: [address as Address],
   });
 
-  // 4. Update balances state when new data arrives
-  useEffect(() => {
-    setBalances(prev => ({
-      ...prev,
-      ...(upBalance !== undefined && { up: upBalance as bigint | null }),
-      ...(downBalance !== undefined && { down: downBalance as bigint | null })
-    }));
-  }, [upBalance, downBalance]);
 
-  console.log("Balanceof " , balances , address);
+  useEffect(() => {
+    console.log('up address', tokenAddresses.up);
+    console.log('down address', tokenAddresses.down);
+    console.log('up balance', upBalance);
+    console.log('down balance', downBalance);
+
+    if (upBalance != null && downBalance != null) {
+      setBalances({ up: upBalance as bigint, down: downBalance as bigint });
+    }
+  }, [upBalance, downBalance, tokenAddresses.up, tokenAddresses.down]);
+
+
 
   useEffect(() => {
     console.log('Watching for events...')
@@ -627,8 +632,8 @@ export default function PredictionPage() {
             <span className="current-price">${((targetAmount)).toString()}</span>
           </div>
           <div>
-  Balance of Token Up: {balances.up ? formatEther(balances.up) : ''}   ' '
-  And Down Tokens: {balances.down ? formatEther(balances.down) : ''}
+   Up ⬆️ tokens: {balances.up ? (formatEther(balances.up)).toString() : ''} <br/>
+   Down ⬇️ tokens: {balances.down ? (formatEther(balances.down)).toString() : ''}
 </div>
         </div>
         {marketResolved ? (

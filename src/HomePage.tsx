@@ -2991,7 +2991,7 @@ export default function HomePage() {
     }
   }
 
-  console.log("Volume data:", tokenBAmount);
+
 
 
   return (
@@ -3175,15 +3175,23 @@ export default function HomePage() {
                         />
                       </div>
                       <div className="liquidity-info-mod">
-                        <span>Pool Ratio: 1 {getTokenSymbol(selectedTokenA)} =
+                        {tokenAAmount ? (  <span>Pool Ratio: 1 {getTokenSymbol(selectedTokenA)} =
                           {(Number(tokenBAmount) / Number(tokenAAmount)).toFixed(4)} {getTokenSymbol(selectedTokenB)}
-                        </span>
+                        </span>): (<span>Pool Ratio: *Enter amount to know*</span>)}
+                      
                       </div>
                     </>
                   ) : (
                     <>
                       <div className="liquidity-input-group-mod">
-                        <span>Available LP: {formatEther((lpBalance as bigint) || 0n)}</span>
+           
+                        <span>
+                          Available LP:{' '}
+                          {lpBalance != null
+                            ? parseFloat(formatEther(lpBalance)).toFixed(4)
+                            : '0.0000'}
+                        </span>
+
                         <input
                           type="number"
                           className="liquidity-input-mod"
@@ -3194,9 +3202,9 @@ export default function HomePage() {
                         />
                       </div>
                       <div className="liquidity-info-mod">
-                        <span>You will receive:</span>
-                        <span>{tokenAAmount} {getTokenSymbol(selectedTokenA)}</span>
-                        <span>{tokenBAmount} {getTokenSymbol(selectedTokenB)}</span>
+                        <span>You will receive: </span>
+                        <span>{getTokenSymbol(selectedTokenA)}</span> &
+                        <span> {getTokenSymbol(selectedTokenB)}</span>
                       </div>
                     </>
                   )}
@@ -3211,9 +3219,12 @@ export default function HomePage() {
 
                   <div className="liquidity-stats-mod">
                     <div className="liquidity-stat-mod">
-                      <span className="liquidity-stat-value-mod">
-                        {isAddLiquidity ? '$42.8B' : `${formatEther((lpBalance as bigint) || 0n)} LP`}
-                      </span>
+                    <span>
+                          Available LP:{' '}
+                          {lpBalance != null
+                            ? parseFloat(formatEther(lpBalance)).toFixed(2)
+                            : '0.0000'}
+                        </span>
                       <span className="liquidity-stat-label-mod">
                         {isAddLiquidity ? 'Total Locked' : 'Your Stake'}
                       </span>
@@ -3339,13 +3350,13 @@ export default function HomePage() {
                   </div>
 
                   <div className="rate-info">
-                    <span className="rate-label">Best rate:</span>
-                    <span className="rate-value">
+                    <span className="rate-label">Best rate:</span> {amountOutDataSwap? (<span className="rate-value">
                       1 {getTokenSymbol(selectedTokenA)} =
                       {swapToAmount && swapFromAmount
                         ? (Number(swapToAmount) / Number(swapFromAmount)).toFixed(4)
                         : '0.0000'} {getTokenSymbol(selectedTokenB)}
-                    </span>
+                    </span>): (<span>*Enter amount to know*</span>)}
+                    
                   </div>
 
                   <div className="card-stats">
