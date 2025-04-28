@@ -68,5 +68,5 @@ src/
 Contributions welcome! Open issues or PRs for enhancements, bug fixes, or new features.
 
 ## License
-MIT
+@Techsteck
 
